@@ -152,13 +152,16 @@ payment, lighting each step as it goes. Once the payment settles, the badge read
 shows the temperature and the forecast, marked as sample data, and the page takes on the forecast's
 weather; the response body and the transaction show below, the transaction linked to gnoscan.io on
 `onyx-1`. The offer then becomes the receipt and offers no second payment: it points on to selling
-an endpoint in gno and to paying from code. A body that is not one of the four forecasts the page
-draws (sunny, cloudy, rain, snow) shows only as served. Without Adena, the offer leads with paying
-from code, a link down to its steps, and offers Adena second, with a link to adena.app and a note to
-reload once it is installed; without JavaScript, only the link to paying from code shows. The steps
-sit behind a warning to read the buyer first: make a throwaway key with it for the page's URL, fund
-the key, then run the pay command the key step printed. Below them, the page shows how a seller
-lists gno on a route in Go, and where a facilitator runs.
+an endpoint in gno and to paying from code. A payment that may still settle, or whose answer never
+came back, withdraws the button and the link to pay from code too, and keeps the steps on the
+retry; a pending one links its transaction. A refusal says what to do before the reason's code and
+gives the button back. A body that is not one of the four forecasts the page draws (sunny, cloudy, rain, snow) shows
+only as served. Without Adena, the offer leads with paying from code, a link down to its steps, and
+offers Adena second, with a link to adena.app and a note to reload once it is installed; without
+JavaScript, only the link to paying from code shows. The steps sit behind a warning to read the
+buyer first: make a throwaway key with it for the page's URL, fund the key, then run the pay command
+the key step printed. Below them, the page shows how a seller lists gno on a route in Go, and where
+a facilitator runs.
 `/` redirects to `/weather`, and `/favicon.ico` serves the page's icon, unpriced.
 
 ## Paying it

@@ -87,6 +87,9 @@ function gnoOffer(terms) {
   return { accepted, memo };
 }
 
+// A payment sent whose answer never came back, which may have settled.
+class PaymentUnanswered extends Error {}
+
 // Adena answers ALREADY_CONNECTED and REDUNDANT_CHANGE_REQUEST as failures
 // although they mean the wallet is already where the page wants it.
 function expectSuccess(response, alsoFine = []) {
@@ -160,7 +163,9 @@ export async function payWithAdena({ adena, fetch: fetchFn, url, report = () => 
     body = await response.text();
   } catch (err) {
     const cause = err instanceof Error ? err.message : String(err);
-    throw new Error(`The payment was sent, but no answer came back (${cause}). Check the account before paying again.`);
+    throw new PaymentUnanswered(
+      `The payment was sent, but no answer came back (${cause}). Check the account before paying again.`,
+    );
   }
 
   // A settle failure carries its reason in the receipt, a verify refusal in a
@@ -178,18 +183,63 @@ export async function payWithAdena({ adena, fetch: fetchFn, url, report = () => 
   };
 }
 
+// What a payer can do about a refusal, for the reasons whose remedy the
+// facilitator's vocabulary names. Any other reason shows as the seller sent it.
+const REMEDIES = new Map([
+  [
+    "invalid_exact_gno_transaction_simulation_failed",
+    "the chain would not run this payment as signed. Check that the account holds the amount and the fee, then pay again",
+  ],
+  [
+    "invalid_exact_gno_payload_signature_invalid",
+    "the signature does not match the paying account on this chain. Pay again from the account Adena shows",
+  ],
+  ["invalid_exact_gno_payload_sequence_mismatch", "this payment was already spent. Pay again to sign a fresh one"],
+]);
+
+// The reasons after which a payment may still settle, or already has, so the
+// page offers no second payment.
+const UNSETTLED = ["settlement_pending", "duplicate_settlement"];
+
 /**
- * Says what a payment came to. A payment the chain admitted but has not yet
- * executed comes back unpaid with its transaction, and may still go through.
+ * Says what a payment came to, what the payer can do first and the reason's
+ * code last. A payment the chain admitted but has not yet executed comes back
+ * unpaid with its transaction, and may still go through.
  */
 export function statusLine(result) {
   if (result.paid) {
     return `Paid. Transaction ${result.transaction}.`;
   }
+  if (result.reason === "settlement_pending") {
+    return `Sent, not settled yet: the chain has the payment but has not run it, so the weather was held back. Transaction ${result.transaction} may still go through; check it before paying again (settlement_pending).`;
+  }
+  if (result.reason === "duplicate_settlement") {
+    return "Already settling: this payment is being settled or was settled. Check the account before paying again (duplicate_settlement).";
+  }
+  const remedy = REMEDIES.get(result.reason);
+  if (remedy !== undefined) {
+    return `Not paid: ${remedy} (${result.reason}).`;
+  }
   if (result.transaction !== "") {
-    return `Sent, not confirmed yet (${result.reason}): the weather was withheld, but transaction ${result.transaction} may still go through.`;
+    return `Not paid: the chain refused transaction ${result.transaction} (${result.reason}).`;
   }
   return `Not paid (${result.status})${result.reason === "" ? "" : `: ${result.reason}`}`;
+}
+
+// showStatus writes line into the status line, its transaction linked to the
+// chain's explorer page for it. data-tx is that page less the hash, and empty on
+// a chain without an explorer.
+function showStatus(document, status, line, transaction) {
+  const explorer = status.dataset.tx ?? "";
+  const at = transaction === "" || explorer === "" ? -1 : line.indexOf(transaction);
+  if (at === -1) {
+    status.textContent = line;
+    return;
+  }
+  const link = document.createElement("a");
+  link.setAttribute("href", explorer + encodeURIComponent(transaction));
+  link.textContent = transaction;
+  status.replaceChildren(line.slice(0, at), link, line.slice(at + transaction.length));
 }
 
 // The forecasts the page has a sky and an icon for; the icon of each is the
@@ -289,9 +339,22 @@ export function start(document, window) {
   // The sky's data-step lights the hero's track; without one it rests on the
   // unpaid request.
   const sky = document.getElementById("sky");
+  // A payment that settled, or may still, withdraws the button, so a second
+  // click cannot sign a second payment for the same reading. Focus then moves to
+  // the status line, since the button that held it is gone.
+  const withdraw = (outcome) => {
+    status.dataset.outcome = outcome;
+    button.hidden = true;
+    status.focus();
+  };
+  const refuse = () => {
+    status.dataset.outcome = "refused";
+    delete sky.dataset.step;
+  };
   button.addEventListener("click", async () => {
     button.disabled = true;
     result.hidden = true;
+    delete status.dataset.outcome;
     try {
       const paid = await payWithAdena({
         adena: window.adena,
@@ -302,18 +365,10 @@ export function start(document, window) {
           sky.dataset.step = step;
         },
       });
-      status.textContent = statusLine(paid);
+      showStatus(document, status, statusLine(paid), paid.transaction);
       if (paid.paid) {
         sky.dataset.step = "200";
-        // data-tx is the chain's explorer page for a transaction, less its hash;
-        // empty on a chain without one.
-        if (status.dataset.tx) {
-          const link = document.createElement("a");
-          link.setAttribute("href", status.dataset.tx + encodeURIComponent(paid.transaction));
-          link.textContent = paid.transaction;
-          status.replaceChildren("Paid. Transaction ", link, ".");
-        }
-        button.hidden = true;
+        withdraw("paid");
         result.querySelector("code").textContent = paid.body;
         result.hidden = false;
         const reading = readingOf(paid.body);
@@ -323,14 +378,25 @@ export function start(document, window) {
           document.getElementById("paid-icon").setAttribute("href", `#i-${reading.forecast}`);
           sky.dataset.forecast = reading.forecast;
         }
+      } else if (UNSETTLED.includes(paid.reason)) {
+        withdraw("pending");
       } else {
-        delete sky.dataset.step;
+        refuse();
       }
     } catch (err) {
       status.textContent = err instanceof Error ? err.message : String(err);
-      delete sky.dataset.step;
+      if (err instanceof PaymentUnanswered) {
+        withdraw("pending");
+      } else {
+        refuse();
+      }
     } finally {
       button.disabled = false;
+      // Disabling the button dropped its focus; after a refusal it takes it
+      // back, now that it can.
+      if (status.dataset.outcome === "refused") {
+        button.focus();
+      }
     }
   });
 }

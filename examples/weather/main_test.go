@@ -398,6 +398,18 @@ func TestEveryElementThePaymentScriptFindsIsOnThePage(t *testing.T) {
 	}
 }
 
+// The script moves focus to the status line when the button it stood under
+// goes, and a paragraph takes focus from a script only with a tabindex.
+func TestTheStatusLineCanTakeFocus(t *testing.T) {
+	gnofacilitator := httptest.NewServer(facilitator.New(unreachableChain{}, exacttest.ChainID).Handler())
+	t.Cleanup(gnofacilitator.Close)
+	sellerURL, _ := weatherSeller(t, gnofacilitator.URL)
+
+	_, page := browserPage(t, sellerURL)
+
+	assert.Regexp(t, `<p id="pay-status"[^>]* tabindex="-1"`, page)
+}
+
 // The script lights the hero's track step by step as a payment goes, so a step
 // it names that the track lacks lights nothing.
 func TestEveryStepTheScriptLightsIsOnTheTrack(t *testing.T) {

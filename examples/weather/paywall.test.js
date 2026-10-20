@@ -378,8 +378,26 @@ describe("statusLine", () => {
 
   it("gives the reason a payment was refused", () => {
     expect(
-      statusLine({ paid: false, status: 402, transaction: "", reason: "invalid_exact_gno_transaction_simulation_failed" }),
-    ).toBe("Not paid (402): invalid_exact_gno_transaction_simulation_failed");
+      statusLine({ paid: false, status: 402, transaction: "", reason: "invalid_exact_gno_payload_amount_mismatch" }),
+    ).toBe("Not paid (402): invalid_exact_gno_payload_amount_mismatch");
+  });
+
+  // A block executed the payment and the chain refused it, so nothing more will
+  // happen to it, though it carries a hash.
+  it("reports a settlement the chain refused as not paid, with its transaction", () => {
+    const line = statusLine({ paid: false, status: 402, transaction: TX_HASH, reason: "invalid_exact_gno_transaction_failed" });
+
+    expect(line).toMatch(/^Not paid/);
+    expect(line).toContain(TX_HASH);
+    expect(line).not.toMatch(/may still go through/);
+  });
+
+  it("says what to do about a refusal before the code that names it", () => {
+    expect(
+      statusLine({ paid: false, status: 402, transaction: "", reason: "invalid_exact_gno_payload_sequence_mismatch" }),
+    ).toBe(
+      "Not paid: this payment was already spent. Pay again to sign a fresh one (invalid_exact_gno_payload_sequence_mismatch).",
+    );
   });
 });
 
@@ -394,9 +412,13 @@ function fakePage() {
       hidden,
       textContent: "",
       disabled: false,
+      focused: false,
       dataset: {},
       listeners,
       attributes,
+      focus() {
+        this.focused = true;
+      },
       addEventListener(type, fn, options) {
         listeners[type] = options?.once
           ? (...args) => {
@@ -545,6 +567,14 @@ describe("start, paying", () => {
     }
   });
 
+  // The button a keyboard user pressed disappears, so focus moves to the
+  // receipt rather than falling back to the top of the page.
+  it("moves focus to the receipt once paid", async () => {
+    const { elements } = await paidPage(WEATHER);
+
+    expect(elements["pay-status"].focused).toBe(true);
+  });
+
   it("says why a click paid nothing, and frees the button", async () => {
     const { document, window, elements } = fakePage();
     window.adena = fakeAdena({
@@ -611,6 +641,91 @@ describe("start, the payment's steps", () => {
     sign({ code: 4001, status: "failure", type: "TRANSACTION_REJECTED", message: "User rejected", data: null });
     await click;
 
+    expect(elements.sky.dataset.step).toBeUndefined();
+  });
+});
+
+// pending is the seller's answer to a payment the chain admitted but no block
+// has executed yet.
+function pending() {
+  return new Response("{}", {
+    status: 402,
+    headers: {
+      "PAYMENT-RESPONSE": encodeHeader({
+        success: false,
+        errorReason: "settlement_pending",
+        transaction: TX_HASH,
+        network: "gno:onyx-1",
+        payer: PAYER,
+      }),
+    },
+  });
+}
+
+// refusedWith is the seller's answer to a payment its facilitator refused for
+// reason, before anything reached the chain.
+function refusedWith(reason) {
+  return () =>
+    new Response("{}", { status: 402, headers: { "PAYMENT-REQUIRED": encodeHeader({ ...terms(), error: reason }) } });
+}
+
+// A second click would sign a second payment while the first may still go
+// through.
+describe("start, a payment that may still settle", () => {
+  it("offers no second payment while a settlement is pending, and links its transaction", async () => {
+    const explorer = "https://gnoscan.io/transactions/details?chainId=onyx-1&txhash=";
+    const { document, window, elements, made } = fakePage();
+    elements["pay-status"].dataset.tx = explorer;
+    window.adena = fakeAdena();
+    window.fetch = fakeSeller(terms(), pending);
+    start(document, window);
+
+    await elements.pay.listeners.click();
+
+    expect(elements.pay.hidden).toBe(true);
+    expect(elements.sky.dataset.step).toBe("retry");
+    expect(made.filter((e) => e.attributes.href !== undefined).map((e) => e.attributes.href)).toEqual([
+      explorer + TX_HASH,
+    ]);
+  });
+
+  it("offers no second payment when the answer to a payment is lost", async () => {
+    const { document, window, elements } = fakePage();
+    window.adena = fakeAdena();
+    window.fetch = fakeSeller(terms(), () => {
+      throw new TypeError("Failed to fetch");
+    });
+    start(document, window);
+
+    await elements.pay.listeners.click();
+
+    expect(elements["pay-status"].textContent).toMatch(/was sent/);
+    expect(elements.pay.hidden).toBe(true);
+  });
+
+  // The button is disabled while a payment runs, which drops its focus.
+  it("hands focus back to the button after a refusal", async () => {
+    const { document, window, elements } = fakePage();
+    window.adena = fakeAdena();
+    window.fetch = fakeSeller(terms(), refusedWith("invalid_exact_gno_payload_sequence_mismatch"));
+    start(document, window);
+
+    await elements.pay.listeners.click();
+
+    expect(elements.pay.focused).toBe(true);
+  });
+
+  // A refusal moved nothing, so paying again is safe.
+  it("frees the button after a refusal", async () => {
+    const { document, window, elements } = fakePage();
+    window.adena = fakeAdena();
+    window.fetch = fakeSeller(terms(), refusedWith("invalid_exact_gno_payload_sequence_mismatch"));
+    start(document, window);
+
+    await elements.pay.listeners.click();
+
+    expect(elements.pay.hidden).toBe(false);
+    expect(elements.pay.disabled).toBe(false);
     expect(elements.sky.dataset.step).toBeUndefined();
   });
 });
