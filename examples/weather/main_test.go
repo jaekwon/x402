@@ -398,6 +398,45 @@ func TestEveryElementThePaymentScriptFindsIsOnThePage(t *testing.T) {
 	}
 }
 
+// The script lights the hero's track step by step as a payment goes, so a step
+// it names that the track lacks lights nothing.
+func TestEveryStepTheScriptLightsIsOnTheTrack(t *testing.T) {
+	gnofacilitator := httptest.NewServer(facilitator.New(unreachableChain{}, exacttest.ChainID).Handler())
+	t.Cleanup(gnofacilitator.Close)
+	sellerURL, _ := weatherSeller(t, gnofacilitator.URL)
+
+	_, page := browserPage(t, sellerURL)
+
+	_, track, found := strings.Cut(page, `<ol class="track"`)
+	require.True(t, found, "the track is gone")
+	track, _, found = strings.Cut(track, "</ol>")
+	require.True(t, found, "the track never closes")
+	lit := regexp.MustCompile(`report\(.*, "([0-9a-z]+)"\);|dataset\.step = "([0-9a-z]+)"`).FindAllStringSubmatch(paywallScript, -1)
+	require.NotEmpty(t, lit, "paywall.js lights no step")
+	for _, step := range lit {
+		assert.Contains(t, track, `data-step="`+step[1]+step[2]+`"`)
+	}
+}
+
+// A paid visit ends on what to do next, selling an endpoint or paying from
+// code, and each way lands on its section of the page.
+func TestAPaidVisitIsHandedTheNextStep(t *testing.T) {
+	gnofacilitator := httptest.NewServer(facilitator.New(unreachableChain{}, exacttest.ChainID).Handler())
+	t.Cleanup(gnofacilitator.Close)
+	sellerURL, _ := weatherSeller(t, gnofacilitator.URL)
+
+	_, page := browserPage(t, sellerURL)
+
+	_, next, found := strings.Cut(page, `<nav class="next"`)
+	require.True(t, found, "the next step is gone")
+	next, _, found = strings.Cut(next, "</nav>")
+	require.True(t, found, "the next step never closes")
+	for _, section := range []string{"sell", "code"} {
+		assert.Contains(t, next, `href="#`+section+`"`)
+		assert.Contains(t, page, `id="`+section+`"`)
+	}
+}
+
 // The script points the paid icon at #i-<forecast> for each forecast it draws,
 // so a forecast without its symbol on the page parts the clouds over nothing.
 func TestThePageHasAnIconForEveryForecastTheScriptDraws(t *testing.T) {

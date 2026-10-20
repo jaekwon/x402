@@ -111,6 +111,21 @@ describe("payWithAdena", () => {
     });
   });
 
+  // The page lights the step of the protocol each message belongs to: the
+  // 402's terms, the buyer's signature, then the paid request.
+  it("says which step of the payment each message belongs to", async () => {
+    const steps = [];
+
+    await payWithAdena({
+      adena: fakeAdena({ chainId: "dev" }),
+      fetch: fakeSeller(terms(), settled),
+      url: URL,
+      report: (_message, step) => steps.push(step),
+    });
+
+    expect(steps).toEqual(["402", "sign", "sign", "sign", "retry"]);
+  });
+
   it("returns the weather and the transaction that paid for it", async () => {
     const result = await payWithAdena({ adena: fakeAdena(), fetch: fakeSeller(terms(), settled), url: URL });
 
@@ -555,6 +570,48 @@ describe("start, paying", () => {
     await copy.listeners.click();
 
     expect(copy.textContent).toBe("Copy failed");
+  });
+});
+
+// signingPage is a page whose Adena holds its answer to SignTx until the test
+// gives it, so the test can look at the page while the wallet asks.
+function signingPage() {
+  const page = fakePage();
+  let answer;
+  page.window.adena = fakeAdena();
+  page.window.adena.SignTx = vi.fn(
+    () =>
+      new Promise((resolve) => {
+        answer = resolve;
+      }),
+  );
+  page.window.fetch = fakeSeller(terms(), settled);
+  start(page.document, page.window);
+  const click = page.elements.pay.listeners.click();
+  return { ...page, click, sign: (response) => answer(response) };
+}
+
+describe("start, the payment's steps", () => {
+  it("lights the signature while Adena asks, then 200 once the weather is paid for", async () => {
+    const { window, elements, click, sign } = signingPage();
+    await vi.waitFor(() => expect(window.adena.SignTx).toHaveBeenCalled());
+
+    expect(elements.sky.dataset.step).toBe("sign");
+
+    sign(ok("SIGN_TX", { encodedTransaction: SIGNED }));
+    await click;
+    expect(elements.sky.dataset.step).toBe("200");
+  });
+
+  it("puts the track back on the unpaid request when the signature is declined", async () => {
+    const { window, elements, click, sign } = signingPage();
+    await vi.waitFor(() => expect(window.adena.SignTx).toHaveBeenCalled());
+    expect(elements.sky.dataset.step).toBe("sign");
+
+    sign({ code: 4001, status: "failure", type: "TRANSACTION_REJECTED", message: "User rejected", data: null });
+    await click;
+
+    expect(elements.sky.dataset.step).toBeUndefined();
   });
 });
 

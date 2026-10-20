@@ -105,18 +105,22 @@ function expectSuccess(response, alsoFine = []) {
  * Throws before anything is sent for a wallet refusal, a missing network or an
  * offer the page cannot pay, and after sending when no answer came back.
  * Otherwise returns what the paid request answered.
+ *
+ * report hears each stage with the step of the exchange it belongs to: "402"
+ * while the terms are read, "sign" while Adena connects and signs, "retry"
+ * while the paid request goes out.
  */
 export async function payWithAdena({ adena, fetch: fetchFn, url, report = () => {} }) {
-  report("Reading the terms…");
+  report("Reading the terms…", "402");
   const terms = await readTerms(fetchFn, url);
   const { accepted, memo } = gnoOffer(terms);
   const chainId = accepted.network.slice(NETWORK_PREFIX.length);
 
-  report("Connecting to Adena…");
+  report("Connecting to Adena…", "sign");
   expectSuccess(await adena.AddEstablish("x402 weather demo"), ["ALREADY_CONNECTED"]);
   const network = expectSuccess(await adena.GetNetwork());
   if (network.chainId !== chainId) {
-    report(`Switching Adena to ${chainId}…`);
+    report(`Switching Adena to ${chainId}…`, "sign");
     const switched = await adena.SwitchNetwork(chainId);
     if (switched?.type === "UNADDED_NETWORK") {
       throw new Error(`Adena has no network ${chainId}; add it in Adena, then pay again`);
@@ -125,7 +129,7 @@ export async function payWithAdena({ adena, fetch: fetchFn, url, report = () => 
   }
   const account = expectSuccess(await adena.GetAccount());
 
-  report("Confirm the payment in Adena…");
+  report("Confirm the payment in Adena…", "sign");
   const signed = expectSuccess(
     await adena.SignTx({
       messages: [
@@ -142,7 +146,7 @@ export async function payWithAdena({ adena, fetch: fetchFn, url, report = () => 
     }),
   );
 
-  report("Paying…");
+  report("Paying…", "retry");
   const payment = {
     x402Version: terms.x402Version,
     resource: terms.resource,
@@ -282,6 +286,9 @@ export function start(document, window) {
   const button = document.getElementById("pay");
   const status = document.getElementById("pay-status");
   const result = document.getElementById("pay-result");
+  // The sky's data-step lights the hero's track; without one it rests on the
+  // unpaid request.
+  const sky = document.getElementById("sky");
   button.addEventListener("click", async () => {
     button.disabled = true;
     result.hidden = true;
@@ -290,10 +297,14 @@ export function start(document, window) {
         adena: window.adena,
         fetch: window.fetch.bind(window),
         url: here,
-        report: (step) => (status.textContent = step),
+        report: (message, step) => {
+          status.textContent = message;
+          sky.dataset.step = step;
+        },
       });
       status.textContent = statusLine(paid);
       if (paid.paid) {
+        sky.dataset.step = "200";
         // data-tx is the chain's explorer page for a transaction, less its hash;
         // empty on a chain without one.
         if (status.dataset.tx) {
@@ -310,11 +321,14 @@ export function start(document, window) {
           document.getElementById("paid-temp").textContent = String(reading.celsius);
           document.getElementById("paid-forecast").textContent = reading.forecast;
           document.getElementById("paid-icon").setAttribute("href", `#i-${reading.forecast}`);
-          document.getElementById("sky").dataset.forecast = reading.forecast;
+          sky.dataset.forecast = reading.forecast;
         }
+      } else {
+        delete sky.dataset.step;
       }
     } catch (err) {
       status.textContent = err instanceof Error ? err.message : String(err);
+      delete sky.dataset.step;
     } finally {
       button.disabled = false;
     }

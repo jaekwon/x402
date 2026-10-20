@@ -18,9 +18,9 @@
   --x-gutter:48px;--x-masthead:73px;
   /* --x-grow scales the hero on a window taller than 900px, by no more than the width past 1382px lets
      the headline's 5.5vw ceiling grow (.07/.055 per px). --x-hero-content is the closed hero's height
-     from 1382px wide; re-measure its 670px and .574 if the hero changes. */
+     from 1382px wide; re-measure its 715px and .591 if the hero changes. */
   --x-grow:clamp(0px,min(var(--x-screen,100vh) - 900px,(100vw - 1382px)/1.273),540px);
-  --x-dial:calc(270px + var(--x-grow)*.4);--x-hero-content:calc(670px + var(--x-grow)*.574);
+  --x-dial:calc(270px + var(--x-grow)*.4);--x-hero-content:calc(715px + var(--x-grow)*.591);
 }
 @media (prefers-color-scheme:dark){:root{
   --x-paper:#132b26;--x-ink:#e4eddf;--x-muted:#b2c4b9;--x-line:#4c6c5e;--x-panel:#203c32;
@@ -84,7 +84,18 @@ pre code{font-size:inherit}
 .sky:has(#pay-result:not([hidden])) .badge{background:var(--x-accent);color:var(--x-on-face)}
 .headline{margin-top:26px;font-family:var(--x-display);font-size:clamp(44px,5.5vw,calc(76px + var(--x-grow)*.07));letter-spacing:-.055em;line-height:1.04}
 .intro{max-width:calc(480px + var(--x-grow)*.25);margin-top:22px;color:var(--x-muted);font-size:calc(16px + var(--x-grow)*.007)}
-.coordinates{margin-top:18px;color:var(--x-muted)}
+/* The exchange a payment walks through. paywall.js names the step it is on in
+   the sky's data-step; without one the page rests on the unpaid request. */
+.track{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));margin:24px 0 0;padding:0;list-style:none}
+.track li{padding:10px 14px 0 0;border-top:2px solid var(--x-line);color:var(--x-muted);font-size:calc(13px + var(--x-grow)*.006);line-height:1.35}
+.track code{display:inline-block;margin-bottom:6px;padding:1px 6px;border:1px solid color-mix(in srgb,currentColor 40%,transparent);color:inherit;font-size:12px;letter-spacing:.04em}
+.sky:is(:not([data-step]),[data-step="402"]) .track [data-step="402"],
+.sky[data-step=sign] .track [data-step=sign],.sky[data-step=sign] .track li:has(~ [data-step=sign]),
+.sky[data-step=retry] .track [data-step=retry],.sky[data-step=retry] .track li:has(~ [data-step=retry]),
+.sky[data-step="200"] .track li{border-top-color:var(--x-ink);color:var(--x-ink)}
+.sky:is(:not([data-step]),[data-step="402"]) .track [data-step="402"] code{border-color:var(--x-due);background:var(--x-due);color:var(--x-on-face)}
+.sky[data-step=sign] .track [data-step=sign] code,.sky[data-step=retry] .track [data-step=retry] code{border-color:var(--x-ink);background:var(--x-ink);color:var(--x-paper)}
+.sky[data-step="200"] .track [data-step="200"] code{border-color:var(--x-accent);background:var(--x-accent);color:var(--x-on-face)}
 .sky:not([data-forecast]) .reading,.sky[data-forecast] .awaiting{display:none}
 .instrument{display:flex;align-items:center;gap:30px;margin-top:28px}
 .gauge{position:relative;flex-shrink:0;width:var(--x-dial)}
@@ -123,16 +134,22 @@ pre code{font-size:inherit}
 .price strong{font-size:calc(66px + var(--x-grow)*.04);font-weight:500;letter-spacing:-.06em;line-height:1}
 .price span{font-size:calc(17px + var(--x-grow)*.007)}
 .fine{margin-top:3px;color:var(--x-muted)}
-.net,#no-adena p{margin-top:14px;color:var(--x-muted);font-size:calc(13px + var(--x-grow)*.005)}
+.net,.role,#no-adena p{margin-top:14px;color:var(--x-muted);font-size:calc(13px + var(--x-grow)*.005)}
 .net code{color:var(--x-ink)}
 .pay-button{display:flex;justify-content:space-between;gap:12px;width:100%;margin-top:22px;padding:calc(17px + var(--x-grow)*.012) 20px;border:1px solid var(--x-on-face);background:var(--x-accent);color:var(--x-on-face);font-size:calc(16px + var(--x-grow)*.006);font-weight:600;text-align:left;text-decoration:none}
 .pay-button:hover{filter:brightness(1.08)}
 .alt-pay{display:flex;justify-content:space-between;gap:12px;margin-top:10px;padding:13px 20px;border:1px solid var(--x-muted);color:var(--x-ink);font-size:calc(14px + var(--x-grow)*.005);text-decoration:none}
 .alt-pay:hover{border-color:var(--x-ink)}
-/* After a payment the page offers no second payment, so the link to pay from code goes too. */
-.sky:has(#pay-result:not([hidden])) .alt-pay{display:none}
+/* Without Adena, paying from code already leads the offer. */
+@media (scripting:enabled){#no-adena:not([hidden]) ~ .alt-pay{display:none}}
 /* Adena pays through the script, so without it only paying from code remains. */
 @media (scripting:none){#no-adena{display:none}}
+/* Paid, the offer turns into the receipt and the way on: no second payment. */
+.next{display:none}
+.sky:has(#pay-result:not([hidden])) .next{display:block}
+.sky:has(#pay-result:not([hidden])) :is(.offer > .alt-pay,.net,.role){display:none}
+.sky:has(#pay-result:not([hidden])) .price strong{font-size:calc(36px + var(--x-grow)*.02)}
+.sky:has(#pay-result:not([hidden])) #pay-status{font-size:calc(16px + var(--x-grow)*.006)}
 .pay-button:disabled{cursor:wait;opacity:.75}
 #pay-status{margin-top:12px;font-size:13px;overflow-wrap:anywhere}
 #pay-status:empty{display:none}
@@ -179,10 +196,12 @@ footer{margin-top:40px;padding-top:15px;border-top:1px solid var(--x-line);color
   .masthead .how{display:none}
   .hero{grid-template-columns:minmax(0,1fr);min-height:0;padding-top:26px}
   .headline{font-size:clamp(34px,8.6vw,56px)}
+  .track{grid-template-columns:repeat(2,minmax(0,1fr));row-gap:14px}
   .instrument{flex-direction:row;align-items:flex-start;gap:18px;margin-top:24px}
   .dial-caption{margin-top:10px;font-size:10px;letter-spacing:.1em}
-  /* On a phone the empty dial stays hidden until a forecast is drawn, so the price comes first. */
-  .sky:not([data-forecast]) .instrument{display:none}
+  /* On a phone the empty dial stays hidden until a forecast is drawn, and the track until a
+     payment starts, so the price comes first. */
+  .sky:not([data-forecast]) .instrument,.sky:not([data-step]) .track{display:none}
   /* The faded rings' box would still pan the page sideways. */
   .gauge::before{display:none}
   .reading-copy .reading-title{font-size:20px}
@@ -198,7 +217,8 @@ footer{margin-top:40px;padding-top:15px;border-top:1px solid var(--x-line);color
   html{scroll-behavior:smooth}
   .eyebrow,.headline{animation:x-rise .5s ease backwards}
   /* Not .instrument: Chrome holds it at the animation's first frame while reporting it finished. */
-  .intro,.coordinates,.offer{animation:x-rise .5s ease .15s backwards}
+  .intro,.track,.offer{animation:x-rise .5s ease .15s backwards}
+  .track li,.track code{transition:border-color .4s ease,color .4s ease,background-color .4s ease}
   .sky::before,.sky::after,.gauge::before{transition:opacity 1.2s ease}
   .dial,.dial::before,.dial::after{transition:background-color 1.2s ease,border-color 1.2s ease,box-shadow 1.2s ease}
   .sky[data-forecast=sunny]::before{animation:x-sunlight 12s ease-in-out infinite alternate}
@@ -231,8 +251,13 @@ footer{margin-top:40px;padding-top:15px;border-top:1px solid var(--x-line);color
       <div>
         <p class="eyebrow mono"><span class="badge"><span class="unpaid">402</span><span class="settled">200</span></span><span class="unpaid">PAYMENT REQUIRED</span><span class="settled">OK · PAYMENT SETTLED</span></p>
         <h1 class="headline">x402 on Gno:<br>pay per HTTP request.</h1>
-        <p class="intro">Sign a payment for one weather request, then get the data once it settles. A script or an agent pays the same price over HTTP, with no account and no API key.</p>
-        <p class="coordinates mono">SAMPLE RESOURCE / GET /weather</p>
+        <p class="intro"><span class="unpaid">Sign a payment for one weather request, then get the data once it settles.</span><span class="settled">You signed one payment, the seller's facilitator settled it, and the weather came back.</span> A script or an agent pays the same price over HTTP, with no account and no API key.</p>
+        <ol class="track" aria-label="The payment, step by step">
+          <li data-step="402"><code>402</code><br>GET /weather names its price</li>
+          <li data-step="sign"><code>sign</code><br>The buyer signs a payment</li>
+          <li data-step="retry"><code>retry</code><br>The same request, paid</li>
+          <li data-step="200"><code>200</code><br>Settled, then served</li>
+        </ol>
         <div class="instrument">
           <div class="gauge">
             <div class="dial">
@@ -258,7 +283,7 @@ footer{margin-top:40px;padding-top:15px;border-top:1px solid var(--x-line);color
 
       <section class="offer" aria-labelledby="offer-title">
         <p class="mono">THE TERMS / SCHEME EXACT</p>
-        <h2 id="offer-title">Get the weather.<br>One reading, one payment.</h2>
+        <h2 id="offer-title"><span class="unpaid">Get the weather.<br>One reading, one payment.</span><span class="settled">Settled, then served.</span></h2>
         <p class="price"><strong>{{.Amount}}</strong><span>{{.Unit}} / request</span></p>
         <p class="fine mono">{{.Coin}}</p>
         <p class="net">Test GNOT on <code>{{.Network}}</code>, from <a href="https://faucet.gno.land">faucet.gno.land</a>. The network fee is on top.</p>
@@ -267,10 +292,16 @@ footer{margin-top:40px;padding-top:15px;border-top:1px solid var(--x-line);color
           <p id="pay-status" role="status" data-tx="{{.TxURL}}"></p>
         </div>
         <div id="no-adena">
-          <a class="pay-button" href="https://adena.app" target="_blank" rel="noopener"><span>Install Adena</span><span aria-hidden="true">↗</span></a>
-          <p>Then reload this page.</p>
+          <a class="pay-button" href="#code"><span>Pay it from code</span><span aria-hidden="true">↓</span></a>
+          <a class="alt-pay" href="https://adena.app" target="_blank" rel="noopener"><span>Or pay with Adena, gno's wallet</span><span aria-hidden="true">↗</span></a>
+          <p>Install it, then reload this page.</p>
         </div>
         <a class="alt-pay" href="#code"><span>Or pay it from code</span><span aria-hidden="true">↓</span></a>
+        <p class="role">Adena only signs the payment. The seller's facilitator, which holds no key, checks it and broadcasts it.</p>
+        <nav class="next" aria-label="Next step">
+          <a class="pay-button" href="#sell"><span>Sell an endpoint in gno</span><span aria-hidden="true">↓</span></a>
+          <a class="alt-pay" href="#code"><span>Pay it from code</span><span aria-hidden="true">↓</span></a>
+        </nav>
         <dl>
           <div><dt>Network</dt><dd><code>{{.Network}}</code><span class="fine">chain id {{.ChainID}}</span></dd></div>
           <div><dt>Pay to</dt><dd><code>{{.PayTo}}</code></dd></div>
@@ -320,6 +351,26 @@ const client = new x402Client()
   .setSpendControls({
     allowedAssets: [{ network: "gno:*", asset: "ugnot", maxAmountPerPayment: "1000000" }],
   });</code></pre>
+
+      <h2 id="sell">Sell an endpoint in gno</h2>
+      <p>A seller lists gno among the ways a route accepts payment, and the ecosystem's x402 middleware does the rest: it prices the route, answers 402 and reads the payment. Only the scheme is gno's. In Go:</p>
+      <pre data-copy><code>routes := x402http.RoutesConfig{
+    "GET /weather": {
+        Accepts: x402http.PaymentOptions{{"{{"}}
+            Scheme:  "exact",
+            PayTo:   "&lt;your g1 address&gt;",
+            Price:   x402.AssetAmount{Asset: "ugnot", Amount: "250000"},
+            Network: "{{.Network}}",
+        }},
+    },
+}
+
+handler := nethttpmw.X402Payment(nethttpmw.Config{
+    Routes:      routes,
+    Facilitator: x402http.NewHTTPFacilitatorClient(&amp;x402http.FacilitatorConfig{URL: facilitatorURL}),
+    Schemes:     []nethttpmw.SchemeConfig{{"{{"}}Network: "{{.Network}}", Server: gnoexact.NewExactGnoScheme()}},
+})(mux)</code></pre>
+      <p>The facilitator holds no key: it checks each payment and broadcasts what the buyer signed. One serves the onyx testnet at <code>https://facilitator.onyx.testnets.gno.land</code>, or <a href="https://github.com/gnoverse/x402/blob/main/docs/deploying.md">run your own</a>. The whole seller behind this page is <a href="https://github.com/gnoverse/x402/blob/main/examples/weather/main.go">examples/weather/main.go</a>.</p>
 
       <h2>Read more</h2>
       <p>The seller, the buyer and a facilitator you can run yourself are in <a href="https://github.com/gnoverse/x402/tree/main/examples/weather">examples/weather</a>. The mechanism and its payment model are in the <a href="https://github.com/gnoverse/x402#readme">gnoverse/x402 README</a>.</p>
