@@ -620,6 +620,15 @@ describe("start, paying", () => {
     expect(shown(elements["pay-status"])).toBe(`Paid on gno:onyx-1. Transaction ${TX_HASH} on gnoscan.io.`);
   });
 
+  // Back from the explorer would load this page afresh, unpaid, and the receipt
+  // with it would be gone.
+  it("opens the explorer beside the receipt, in a new tab", async () => {
+    const { made } = await paidPage(WEATHER, "https://gnoscan.io/transactions/details?chainId=onyx-1&txhash=");
+
+    const [link] = made.filter((e) => e.attributes.href !== undefined);
+    expect(link.attributes).toMatchObject({ target: "_blank", rel: "noopener" });
+  });
+
   // A screen reader would otherwise voice all 64 characters of the hash.
   it("reads the transaction to a screen reader by its first eight characters", async () => {
     for (const [explorer, where] of [

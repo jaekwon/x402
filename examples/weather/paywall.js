@@ -267,6 +267,8 @@ function showStatus(document, status, line, transaction) {
   hash.append(full, short);
   if (explorer !== "") {
     hash.setAttribute("href", explorer + encodeURIComponent(transaction));
+    hash.setAttribute("target", "_blank");
+    hash.setAttribute("rel", "noopener");
     hash.append(` on ${new URL(explorer).host}`);
   }
   status.replaceChildren(line.slice(0, at), hash, line.slice(at + transaction.length));
