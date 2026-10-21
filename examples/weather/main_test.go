@@ -360,6 +360,26 @@ func TestWithoutAdenaThePageListsTheStepsToIt(t *testing.T) {
 	assert.Contains(t, steps[2], "Reload this page")
 }
 
+// A touch screen pays on neither path, so what it can do, sending the page on
+// to a computer, is the main button there, and paying from code only says how.
+func TestATouchScreenIsOfferedToSendThePageOnFirst(t *testing.T) {
+	gnofacilitator := httptest.NewServer(facilitator.New(unreachableChain{}, exacttest.ChainID).Handler())
+	t.Cleanup(gnofacilitator.Close)
+	sellerURL, _ := weatherSeller(t, gnofacilitator.URL)
+
+	_, page := browserPage(t, sellerURL)
+
+	_, noAdena, found := strings.Cut(page, `<div id="no-adena"`)
+	require.True(t, found, "the no-wallet note is gone")
+	noAdena, _, found = strings.Cut(noAdena, "</div>")
+	require.True(t, found, "the no-wallet note never closes")
+	send := strings.Index(noAdena, `<button class="pay-button" id="send-link"`)
+	require.NotEqual(t, -1, send, "sending the page on is not a main button")
+	steps := strings.Index(noAdena, "How to pay from code")
+	require.NotEqual(t, -1, steps, "a touch screen is not told how to pay from code")
+	assert.Less(t, send, steps)
+}
+
 func TestATransactionLinksToTheExplorerOfTheChainsItKnows(t *testing.T) {
 	assert.Equal(t, "https://gnoscan.io/transactions/details?chainId=onyx-1&txhash=", explorerTxURL("onyx-1"))
 	assert.Empty(t, explorerTxURL("dev"), "a local chain has no explorer")

@@ -153,14 +153,13 @@ pre code{font-size:inherit}
 @media (scripting:enabled){#no-adena:not([hidden]) ~ .alt-pay{display:none}}
 /* Adena pays through the script, so without it only paying from code remains. */
 @media (scripting:none){#no-adena{display:none}}
-/* A touch screen pays on neither path, so the offer says so and hands the page on to a
-   computer, where the faucet and Adena's setup are needed. */
-.phone-note,#send-link{display:none}
-#send-link{width:100%;background:none;text-align:left}
+/* A touch screen pays on neither path, so there the offer says so, its main button hands the
+   page on to a computer, and paying from code, like the faucet and Adena's setup, waits for it. */
+.phone-note,#send-link,.code-steps{display:none}
 @media (pointer:coarse){
   .phone-note{display:block}
-  #send-link{display:flex}
-  .offer:has(#no-adena:not([hidden])) .net,#no-adena a[href^="https://adena.app"],.setup{display:none}
+  #send-link,.code-steps{display:flex}
+  .offer:has(#no-adena:not([hidden])) .net,#no-adena a[href^="https://adena.app"],.setup,.code-pay{display:none}
   /* Targets a finger can hit: 44px or more, the masthead's without moving its layout. */
   .copy{padding:14px 12px}
   summary{padding-block:12px}
@@ -341,8 +340,9 @@ footer{margin-top:40px;padding-top:15px;border-top:1px solid var(--x-line);color
         </div>
         <div id="no-adena">
           <p class="phone-note">Paying takes a computer: Adena is a desktop browser extension, and paying from code needs a terminal. <a href="#how">See how it works</a>.</p>
-          <a class="pay-button" href="#code"><span>Pay it from code</span><span aria-hidden="true">↓</span></a>
-          <button class="alt-pay" id="send-link" type="button"><span>Send this page to a computer</span></button>
+          <button class="pay-button" id="send-link" type="button"><span>Send this page to a computer</span></button>
+          <a class="pay-button code-pay" href="#code"><span>Pay it from code</span><span aria-hidden="true">↓</span></a>
+          <a class="alt-pay code-steps" href="#code"><span>How to pay from code</span><span aria-hidden="true">↓</span></a>
           <a class="alt-pay" href="https://adena.app" target="_blank" rel="noopener"><span>Or pay with Adena, a gno wallet</span><span aria-hidden="true">↗</span></a>
           <ol class="setup">
             <li>Install Adena in this browser.</li>

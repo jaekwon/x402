@@ -146,8 +146,9 @@ price in GNOT, then in ugnot with what a ugnot is, the network and, on `onyx-1`,
 payee, and how to pay. On a window 800px wide or less the steps and the dial follow the offer,
 which stays put as they appear: the dial once paid, the steps once a payment starts. A touch
 screen pays on neither path, so there the offer says paying
-takes a computer, links how it works, and sends the page on to one through the share sheet or the
-clipboard; the faucet line, Adena's install link and the steps to it wait for that computer. The middleware's own
+takes a computer and links how it works; its main button sends the page on to one through the share
+sheet or the clipboard, and a second says how to pay from code. The faucet line, Adena's install
+link and the steps to it wait for that computer. The middleware's own
 paywall supports EVM and Solana chains only. In a browser with the [Adena](https://adena.app)
 wallet, a visitor pays from the page. A line beside the
 offer says what Adena does there: it only signs, and the seller's facilitator, which holds no key,
