@@ -3,8 +3,8 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="color-scheme" content="light dark">
-<meta name="description" content="A testnet demo of x402 on Gno: pay {{.Amount}} {{.Unit}} for one sample weather reading, from the Adena wallet or from code. The mechanism is unaudited and pre-release.">
-<title>Payment required · x402 on Gno testnet demo</title>
+<meta name="description" content="A {{.Demo}} of x402 on Gno: pay {{.Amount}} {{.Unit}} for one sample weather reading, from the Adena wallet or from code. The mechanism is unaudited and pre-release.">
+<title>Payment required · x402 on Gno {{.Demo}}</title>
 <style>
 :root{
   --x-paper:#eceee8;--x-ink:#183c34;--x-muted:#4a6057;--x-line:#aab9aa;--x-panel:#e2e6db;
@@ -292,7 +292,7 @@ footer{margin-top:40px;padding-top:15px;border-top:1px solid var(--x-line);color
 <div class="sky" id="sky">
   <header class="masthead">
     <p class="brand"><span aria-hidden="true"></span>x402 / Gno</p>
-    <p class="edition mono"><span class="nowrap">testnet demo ·</span> <span class="nowrap">unaudited ·</span> <span class="nowrap">pre-release ·</span> <span class="nowrap">sample weather data</span></p>
+    <p class="edition mono"><span class="nowrap">{{.Demo}} ·</span> <span class="nowrap">unaudited ·</span> <span class="nowrap">pre-release ·</span> <span class="nowrap">sample weather data</span></p>
     <nav aria-label="Page">
       <a class="mono how" href="#how">How it works ↓</a>
       <a class="mono" href="https://github.com/gnoverse/x402">Source on GitHub ↗</a>

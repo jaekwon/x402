@@ -218,8 +218,9 @@ func TestThePageOpensOnADemoMastheadLinkingTheSource(t *testing.T) {
 	_, page := browserPage(t, sellerURL)
 
 	head, masthead := headAndMasthead(t, page)
-	assert.Contains(t, head, "<title>Payment required · x402 on Gno testnet demo</title>")
-	assert.Contains(t, masthead, "testnet demo", "on the page, not only in the tab")
+	assert.Contains(t, head, "<title>Payment required · x402 on Gno local demo</title>")
+	assert.Contains(t, masthead, "local demo", "on the page, not only in the tab")
+	assert.NotContains(t, head+masthead, "testnet", "a dev chain is no public testnet")
 	assert.Contains(t, masthead, `href="https://github.com/gnoverse/x402"`)
 	assert.NotContains(t, head+masthead, "live", "live next to weather reads as real data")
 }
@@ -388,6 +389,11 @@ func TestATransactionLinksToTheExplorerOfTheChainsItKnows(t *testing.T) {
 func TestTheFaucetIsNamedForTheChainsItFunds(t *testing.T) {
 	assert.Equal(t, "faucet.gno.land", faucetHost("onyx-1"))
 	assert.Empty(t, faucetHost("dev"), "no public faucet funds a local chain")
+}
+
+func TestTheDemoIsLabelledByWhereItsChainRuns(t *testing.T) {
+	assert.Equal(t, "testnet demo", demoLabel("onyx-1"))
+	assert.Equal(t, "local demo", demoLabel("dev"), "gnodev and gnoland start a dev chain, on the machine that runs them")
 }
 
 // The page hands the explorer to the script on the status line, and an empty

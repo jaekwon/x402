@@ -140,7 +140,8 @@ the facilitator holds no key. The mechanism sets it, so no seller writes it. The
 omitted.
 
 A browser gets a page instead (`paywall.html`): a masthead naming it an unaudited, pre-release
-testnet demo with sample weather data and linking this repository, then the 402, the four steps of
+testnet demo with sample weather data, or a local demo on a `dev` chain, and linking this
+repository, then the 402, the four steps of
 the exchange (402, sign, retry, 200), a dial waiting for the reading, and the terms beside it: the
 price in GNOT, then in ugnot with what a ugnot is, the network and, on `onyx-1`, its faucet, the
 payee, and how to pay. On a window 800px wide or less the steps and the dial follow the offer,

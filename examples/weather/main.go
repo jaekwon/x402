@@ -189,8 +189,8 @@ func newSeller(ctx context.Context, cfg sellerConfig) (http.Handler, error) {
 	chainID := strings.TrimPrefix(cfg.network, "gno:")
 	var page strings.Builder
 	err := paywall.Execute(&page, struct {
-		Amount, Unit, Coin, Network, ChainID, PayTo, TxURL, Faucet string
-		Script                                                     template.JS
+		Amount, Unit, Coin, Network, ChainID, PayTo, TxURL, Faucet, Demo string
+		Script                                                           template.JS
 	}{
 		Amount:  amount,
 		Unit:    unit,
@@ -200,6 +200,7 @@ func newSeller(ctx context.Context, cfg sellerConfig) (http.Handler, error) {
 		PayTo:   cfg.payTo,
 		TxURL:   explorerTxURL(chainID),
 		Faucet:  faucetHost(chainID),
+		Demo:    demoLabel(chainID),
 		Script:  template.JS(paywallScript),
 	})
 	if err != nil {
@@ -347,4 +348,13 @@ func faucetHost(chainID string) string {
 		return "faucet.gno.land"
 	}
 	return ""
+}
+
+// demoLabel names the demo by where chainID runs: dev is the chain gnodev and
+// gnoland start by default, local to whoever runs them, and any other a testnet.
+func demoLabel(chainID string) string {
+	if chainID == "dev" {
+		return "local demo"
+	}
+	return "testnet demo"
 }
