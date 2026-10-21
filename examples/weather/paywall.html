@@ -432,9 +432,14 @@ const client = new x402Client()
 }
 
 handler := nethttpmw.X402Payment(nethttpmw.Config{
-    Routes:      routes,
-    Facilitator: x402http.NewHTTPFacilitatorClient(&amp;x402http.FacilitatorConfig{URL: facilitatorURL}),
-    Schemes:     []nethttpmw.SchemeConfig{{"{{"}}Network: "{{.Network}}", Server: gnoexact.NewExactGnoScheme()}},
+    Routes: routes,
+    Facilitator: x402http.NewHTTPFacilitatorClient(&amp;x402http.FacilitatorConfig{
+        URL: facilitatorURL,
+    }),
+    Schemes: []nethttpmw.SchemeConfig{{"{{"}}
+        Network: "{{.Network}}",
+        Server:  gnoexact.NewExactGnoScheme(),
+    }},
 })(mux)</code></pre>
       <p>The facilitator holds no key: it checks each payment and broadcasts what the buyer signed. One serves the onyx testnet at <code>https://facilitator.onyx.testnets.gno.land</code>, or <a href="https://github.com/gnoverse/x402/blob/main/docs/deploying.md">run your own</a>. The whole seller behind this page is <a href="https://github.com/gnoverse/x402/blob/main/examples/weather/main.go">examples/weather/main.go</a>.</p>
 

@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/base64"
 	"encoding/json"
+	"html"
 	"io"
 	"log/slog"
 	"net/http"
@@ -14,6 +15,7 @@ import (
 	"sync"
 	"sync/atomic"
 	"testing"
+	"unicode/utf8"
 
 	"github.com/gnolang/gno/tm2/pkg/std"
 	"github.com/stretchr/testify/assert"
@@ -480,6 +482,29 @@ func TestEverySnippetFollowsTheWarning(t *testing.T) {
 	for _, before := range chunks[:len(chunks)-1] {
 		since := max(strings.LastIndex(before, "</pre>"), strings.LastIndex(before, "<h2"))
 		assert.Contains(t, before[since+1:], "The mechanism is unaudited and pre-release")
+	}
+}
+
+// snippetColumns is about how many characters of a snippet's 12px monospace
+// the documentation column shows beside its Copy button.
+const snippetColumns = 90
+
+// A longer line scrolls out of sight, and a reader skimming a snippet for the
+// part that is gno's may never see it.
+func TestEverySnippetLineFitsTheDocumentationColumn(t *testing.T) {
+	gnofacilitator := httptest.NewServer(facilitator.New(unreachableChain{}, "onyx-1").Handler())
+	t.Cleanup(gnofacilitator.Close)
+	sellerURL, _ := weatherSeller(t, gnofacilitator.URL, func(cfg *sellerConfig) { cfg.network = "gno:onyx-1" })
+
+	_, page := browserPage(t, sellerURL)
+
+	snippets := regexp.MustCompile(`(?s)<pre class="snippet"[^>]*><code[^>]*>(.*?)</code></pre>`).FindAllStringSubmatch(page, -1)
+	require.NotEmpty(t, snippets, "the page shows no snippet")
+	for _, snippet := range snippets {
+		for line := range strings.Lines(html.UnescapeString(snippet[1])) {
+			line = strings.TrimSuffix(line, "\n")
+			assert.LessOrEqual(t, utf8.RuneCountInString(line), snippetColumns, "%s", line)
+		}
 	}
 }
 
