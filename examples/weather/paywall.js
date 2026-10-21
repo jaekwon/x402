@@ -179,6 +179,7 @@ export async function payWithAdena({ adena, fetch: fetchFn, url, report = () => 
     status: response.status,
     body,
     transaction: receipt.transaction ?? "",
+    network: accepted.network,
     reason: firstText(receipt.errorReason, challenge.error),
   };
 }
@@ -208,7 +209,7 @@ const UNSETTLED = ["settlement_pending", "duplicate_settlement"];
  */
 export function statusLine(result) {
   if (result.paid) {
-    return `Paid. Transaction ${result.transaction}.`;
+    return `Paid on ${result.network}. Transaction ${result.transaction}.`;
   }
   if (result.reason === "settlement_pending") {
     return `Sent, not settled yet: the chain has the payment but has not run it, so the weather was held back. Transaction ${result.transaction} may still go through; check it before paying again (settlement_pending).`;
@@ -227,9 +228,9 @@ export function statusLine(result) {
 }
 
 // showStatus writes line into the status line, its transaction linked to the
-// chain's explorer page for it. data-tx is that page less the hash, and empty on
-// a chain without an explorer. A screen reader hears the transaction by its
-// first eight characters, not all 64.
+// chain's explorer page for it, which the link names by its host. data-tx is
+// that page less the hash, and empty on a chain without an explorer. A screen
+// reader hears the transaction by its first eight characters, not all 64.
 function showStatus(document, status, line, transaction) {
   const at = transaction === "" ? -1 : line.indexOf(transaction);
   if (at === -1) {
@@ -238,9 +239,6 @@ function showStatus(document, status, line, transaction) {
   }
   const explorer = status.dataset.tx ?? "";
   const hash = document.createElement(explorer === "" ? "span" : "a");
-  if (explorer !== "") {
-    hash.setAttribute("href", explorer + encodeURIComponent(transaction));
-  }
   const full = document.createElement("span");
   full.setAttribute("aria-hidden", "true");
   full.textContent = transaction;
@@ -248,6 +246,10 @@ function showStatus(document, status, line, transaction) {
   short.className = "visually-hidden";
   short.textContent = `${transaction.slice(0, 8)}…`;
   hash.append(full, short);
+  if (explorer !== "") {
+    hash.setAttribute("href", explorer + encodeURIComponent(transaction));
+    hash.append(` on ${new URL(explorer).host}`);
+  }
   status.replaceChildren(line.slice(0, at), hash, line.slice(at + transaction.length));
 }
 

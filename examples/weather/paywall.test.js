@@ -134,6 +134,7 @@ describe("payWithAdena", () => {
       status: 200,
       body: WEATHER,
       transaction: TX_HASH,
+      network: "gno:onyx-1",
       reason: "",
     });
   });
@@ -360,9 +361,9 @@ describe("payWithAdena, again", () => {
 });
 
 describe("statusLine", () => {
-  it("names the transaction that paid", () => {
-    expect(statusLine({ paid: true, status: 200, transaction: TX_HASH, reason: "" })).toBe(
-      `Paid. Transaction ${TX_HASH}.`,
+  it("names the network that settled the payment and its transaction", () => {
+    expect(statusLine({ paid: true, status: 200, transaction: TX_HASH, network: "gno:onyx-1", reason: "" })).toBe(
+      `Paid on gno:onyx-1. Transaction ${TX_HASH}.`,
     );
   });
 
@@ -544,31 +545,36 @@ describe("start, paying", () => {
   it("pays on a click, shows the weather and the transaction, and offers no second payment", async () => {
     const { elements, made } = await paidPage(WEATHER);
 
-    expect(shown(elements["pay-status"])).toBe(`Paid. Transaction ${TX_HASH}.`);
+    expect(shown(elements["pay-status"])).toBe(`Paid on gno:onyx-1. Transaction ${TX_HASH}.`);
     expect(made.filter((e) => e.attributes.href !== undefined)).toEqual([]);
     expect(elements["pay-result"].hidden).toBe(false);
     expect(elements["pay-result"].querySelector("code").textContent).toBe(WEATHER);
     expect(elements.pay.hidden).toBe(true);
   });
 
-  it("links the transaction to the explorer the page names", async () => {
+  // A link named by a hash alone does not say where it leads.
+  it("links the transaction to the explorer the page names, and names the explorer", async () => {
     const explorer = "https://gnoscan.io/transactions/details?chainId=onyx-1&txhash=";
     const { elements, made } = await paidPage(WEATHER, explorer);
 
     const links = made.filter((e) => e.attributes.href !== undefined);
     expect(links).toHaveLength(1);
     expect(links[0].attributes.href).toBe(explorer + TX_HASH);
-    expect(shown(links[0])).toBe(TX_HASH);
-    expect(shown(elements["pay-status"])).toBe(`Paid. Transaction ${TX_HASH}.`);
+    expect(shown(links[0])).toBe(`${TX_HASH} on gnoscan.io`);
+    expect(spoken(links[0])).toBe(`${TX_HASH.slice(0, 8)}… on gnoscan.io`);
+    expect(shown(elements["pay-status"])).toBe(`Paid on gno:onyx-1. Transaction ${TX_HASH} on gnoscan.io.`);
   });
 
   // A screen reader would otherwise voice all 64 characters of the hash.
   it("reads the transaction to a screen reader by its first eight characters", async () => {
-    for (const explorer of ["", "https://gnoscan.io/transactions/details?chainId=onyx-1&txhash="]) {
+    for (const [explorer, where] of [
+      ["", ""],
+      ["https://gnoscan.io/transactions/details?chainId=onyx-1&txhash=", " on gnoscan.io"],
+    ]) {
       const { elements } = await paidPage(WEATHER, explorer);
 
-      expect(spoken(elements["pay-status"])).toBe(`Paid. Transaction ${TX_HASH.slice(0, 8)}….`);
-      expect(shown(elements["pay-status"])).toBe(`Paid. Transaction ${TX_HASH}.`);
+      expect(spoken(elements["pay-status"])).toBe(`Paid on gno:onyx-1. Transaction ${TX_HASH.slice(0, 8)}…${where}.`);
+      expect(shown(elements["pay-status"])).toBe(`Paid on gno:onyx-1. Transaction ${TX_HASH}${where}.`);
     }
   });
 
@@ -601,7 +607,7 @@ describe("start, paying", () => {
     ]) {
       const { elements } = await paidPage(body);
 
-      expect(shown(elements["pay-status"])).toBe(`Paid. Transaction ${TX_HASH}.`);
+      expect(shown(elements["pay-status"])).toBe(`Paid on gno:onyx-1. Transaction ${TX_HASH}.`);
       expect(elements["pay-result"].hidden).toBe(false);
       expect(elements["pay-result"].querySelector("code").textContent).toBe(body);
       expect(elements.sky.dataset.forecast).toBeUndefined();
