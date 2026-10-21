@@ -499,6 +499,23 @@ func TestEveryElementThePaymentScriptFindsIsOnThePage(t *testing.T) {
 	}
 }
 
+// A class the script gives an element does nothing unless the page styles it:
+// the transaction's screen-reader form would show beside the hash it stands for.
+func TestEveryClassThePaymentScriptSetsIsStyled(t *testing.T) {
+	gnofacilitator := httptest.NewServer(facilitator.New(unreachableChain{}, exacttest.ChainID).Handler())
+	t.Cleanup(gnofacilitator.Close)
+	sellerURL, _ := weatherSeller(t, gnofacilitator.URL)
+
+	_, page := browserPage(t, sellerURL)
+
+	classes := regexp.MustCompile(`className = "([^"]+)"`).FindAllStringSubmatch(paywallScript, -1)
+	require.NotEmpty(t, classes, "paywall.js sets no class")
+	head, _ := headAndMasthead(t, page)
+	for _, class := range classes {
+		assert.Contains(t, head, "."+class[1]+"{")
+	}
+}
+
 // The script moves focus to the status line when the button it stood under
 // goes, and a paragraph takes focus from a script only with a tabindex.
 func TestTheStatusLineCanTakeFocus(t *testing.T) {

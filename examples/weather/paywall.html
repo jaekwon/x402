@@ -178,6 +178,9 @@ pre code{font-size:inherit}
 .pay-button:disabled{cursor:wait;opacity:.75}
 #pay-status{margin-top:12px;color:var(--x-muted);font-size:13px;overflow-wrap:anywhere}
 #pay-status:empty{display:none}
+/* Voiced by a screen reader, never drawn, and left out of a selection so the hash beside it
+   copies alone. */
+.visually-hidden{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap;user-select:none}
 /* paywall.js names how a payment ended in data-outcome; while it runs there is none. */
 #pay-status[data-outcome]{color:var(--x-ink)}
 #pay-status:is([data-outcome=refused],[data-outcome=pending]){padding:12px 14px;background:var(--x-panel)}

@@ -228,18 +228,27 @@ export function statusLine(result) {
 
 // showStatus writes line into the status line, its transaction linked to the
 // chain's explorer page for it. data-tx is that page less the hash, and empty on
-// a chain without an explorer.
+// a chain without an explorer. A screen reader hears the transaction by its
+// first eight characters, not all 64.
 function showStatus(document, status, line, transaction) {
-  const explorer = status.dataset.tx ?? "";
-  const at = transaction === "" || explorer === "" ? -1 : line.indexOf(transaction);
+  const at = transaction === "" ? -1 : line.indexOf(transaction);
   if (at === -1) {
     status.textContent = line;
     return;
   }
-  const link = document.createElement("a");
-  link.setAttribute("href", explorer + encodeURIComponent(transaction));
-  link.textContent = transaction;
-  status.replaceChildren(line.slice(0, at), link, line.slice(at + transaction.length));
+  const explorer = status.dataset.tx ?? "";
+  const hash = document.createElement(explorer === "" ? "span" : "a");
+  if (explorer !== "") {
+    hash.setAttribute("href", explorer + encodeURIComponent(transaction));
+  }
+  const full = document.createElement("span");
+  full.setAttribute("aria-hidden", "true");
+  full.textContent = transaction;
+  const short = document.createElement("span");
+  short.className = "visually-hidden";
+  short.textContent = `${transaction.slice(0, 8)}…`;
+  hash.append(full, short);
+  status.replaceChildren(line.slice(0, at), hash, line.slice(at + transaction.length));
 }
 
 // The forecasts the page has a sky and an icon for; the icon of each is the

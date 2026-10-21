@@ -410,7 +410,13 @@ function fakePage() {
     const code = { textContent: "", innerText: "" };
     return {
       hidden,
-      textContent: "",
+      children: [],
+      get textContent() {
+        return this.children.map((n) => (typeof n === "string" ? n : n.textContent)).join("");
+      },
+      set textContent(value) {
+        this.children = [String(value)];
+      },
       disabled: false,
       focused: false,
       dataset: {},
@@ -431,9 +437,11 @@ function fakePage() {
         attributes[name] = value;
       },
       querySelector: () => code,
-      append() {},
+      append(...nodes) {
+        this.children.push(...nodes);
+      },
       replaceChildren(...nodes) {
-        this.textContent = nodes.map((n) => (typeof n === "string" ? n : n.textContent)).join("");
+        this.children = nodes;
       },
     };
   };
@@ -476,6 +484,27 @@ function fakePage() {
   return { document, window, elements, urls, made };
 }
 
+// shown is the text a sighted visitor reads in node, which leaves out what is
+// visually hidden.
+function shown(node) {
+  if (typeof node === "string") {
+    return node;
+  }
+  return node.className === "visually-hidden" ? "" : node.children.map(shown).join("");
+}
+
+// spoken is what a screen reader voices in node: all but what is aria-hidden,
+// its runs of spaces read as one.
+function spoken(node) {
+  const text = (n) => {
+    if (typeof n === "string") {
+      return n;
+    }
+    return n.attributes["aria-hidden"] === "true" ? "" : n.children.map(text).join("");
+  };
+  return text(node).replace(/\s+/g, " ");
+}
+
 describe("start", () => {
   // Adena injects window.adena from a script it loads itself, which can land
   // after the page has loaded.
@@ -515,7 +544,7 @@ describe("start, paying", () => {
   it("pays on a click, shows the weather and the transaction, and offers no second payment", async () => {
     const { elements, made } = await paidPage(WEATHER);
 
-    expect(elements["pay-status"].textContent).toBe(`Paid. Transaction ${TX_HASH}.`);
+    expect(shown(elements["pay-status"])).toBe(`Paid. Transaction ${TX_HASH}.`);
     expect(made.filter((e) => e.attributes.href !== undefined)).toEqual([]);
     expect(elements["pay-result"].hidden).toBe(false);
     expect(elements["pay-result"].querySelector("code").textContent).toBe(WEATHER);
@@ -529,8 +558,18 @@ describe("start, paying", () => {
     const links = made.filter((e) => e.attributes.href !== undefined);
     expect(links).toHaveLength(1);
     expect(links[0].attributes.href).toBe(explorer + TX_HASH);
-    expect(links[0].textContent).toBe(TX_HASH);
-    expect(elements["pay-status"].textContent).toBe(`Paid. Transaction ${TX_HASH}.`);
+    expect(shown(links[0])).toBe(TX_HASH);
+    expect(shown(elements["pay-status"])).toBe(`Paid. Transaction ${TX_HASH}.`);
+  });
+
+  // A screen reader would otherwise voice all 64 characters of the hash.
+  it("reads the transaction to a screen reader by its first eight characters", async () => {
+    for (const explorer of ["", "https://gnoscan.io/transactions/details?chainId=onyx-1&txhash="]) {
+      const { elements } = await paidPage(WEATHER, explorer);
+
+      expect(spoken(elements["pay-status"])).toBe(`Paid. Transaction ${TX_HASH.slice(0, 8)}….`);
+      expect(shown(elements["pay-status"])).toBe(`Paid. Transaction ${TX_HASH}.`);
+    }
   });
 
   it("writes the reading into the sky: its forecast, its icon and its temperature", async () => {
@@ -562,7 +601,7 @@ describe("start, paying", () => {
     ]) {
       const { elements } = await paidPage(body);
 
-      expect(elements["pay-status"].textContent).toBe(`Paid. Transaction ${TX_HASH}.`);
+      expect(shown(elements["pay-status"])).toBe(`Paid. Transaction ${TX_HASH}.`);
       expect(elements["pay-result"].hidden).toBe(false);
       expect(elements["pay-result"].querySelector("code").textContent).toBe(body);
       expect(elements.sky.dataset.forecast).toBeUndefined();
