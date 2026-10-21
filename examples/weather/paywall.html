@@ -207,6 +207,8 @@ summary{width:fit-content;font-size:calc(13px + var(--x-grow)*.005);cursor:point
 .documentation{max-width:760px;margin:0 auto 60px}
 .documentation h2{margin:44px 0 16px;font-size:28px;letter-spacing:-.04em;line-height:1.2}
 .documentation p{margin-top:16px;color:var(--x-muted)}
+/* Prose keeps to about 70 characters a line; code keeps the whole column. */
+.documentation > p,.caution p,.flow li > div,.steps p{max-width:36em}
 /* A URL in a sentence is one long word; it breaks rather than widen a phone's page. */
 .documentation p code{overflow-wrap:anywhere}
 .flow{margin:0;padding:0;list-style:none}
@@ -222,6 +224,7 @@ summary{width:fit-content;font-size:calc(13px + var(--x-grow)*.005);cursor:point
 .steps>li::before{content:counter(step,decimal-leading-zero);font:11px/2.3 var(--x-mono);letter-spacing:.06em;color:var(--x-ink)}
 .steps>li:last-child{border-bottom:1px solid var(--x-line)}
 .steps b,.steps code{color:var(--x-ink)}
+.steps p{margin:0}
 .nowrap{white-space:nowrap}
 footer{margin-top:40px;padding-top:15px;border-top:1px solid var(--x-line);color:var(--x-muted);font-size:12px}
 .documentation footer p{margin:0;color:inherit}
@@ -399,11 +402,11 @@ curl -si <span data-url>&lt;this page's URL&gt;</span></code></pre>
         <p><b>The script signs with the mnemonic you give it.</b> Read it first, and never give it a mnemonic that holds anything: use a throwaway key. A <a href="https://github.com/gnoverse/x402/blob/main/client/README.md#paying-with-a-session-key">session key</a> works too, with <code>X402_SESSION_MASTER</code> set to your address; the chain holds it to its spend limit.</p>
       </div>
       <ol class="steps">
-        <li><div><b>Read the script.</b> <a href="https://github.com/gnoverse/x402/blob/main/examples/weather/buy.mjs">examples/weather/buy.mjs</a> is the whole buyer the commands below run.</div></li>
-        <li><div><b>Make a throwaway key.</b> This prints a new mnemonic, its address and the command that pays this page with it, and saves none of them.
+        <li><div><p><b>Read the script.</b> <a href="https://github.com/gnoverse/x402/blob/main/examples/weather/buy.mjs">examples/weather/buy.mjs</a> is the whole buyer the commands below run.</p></div></li>
+        <li><div><p><b>Make a throwaway key.</b> This prints a new mnemonic, its address and the command that pays this page with it, and saves none of them.</p>
           <pre data-copy><code>npx github:gnoverse/x402#client/v0.5.0 <span class="nowrap">--new-key</span> <span data-url>&lt;this page's URL&gt;</span></code></pre></div></li>
-        <li><div><b>Fund its address</b>{{with .Faucet}} at <a href="https://{{.}}">{{.}}</a>{{end}} with test GNOT on <code class="nowrap">{{.Network}}</code>: {{.Amount}} {{.Unit}} for the weather, and the network fee on top.</div></li>
-        <li><div><b>Pay</b> with the command step 2 printed. It looks like this, and prints the transaction and the weather.
+        <li><div><p><b>Fund its address</b>{{with .Faucet}} at <a href="https://{{.}}">{{.}}</a>{{end}} with test GNOT on <code class="nowrap">{{.Network}}</code>: {{.Amount}} {{.Unit}} for the weather, and the network fee on top.</p></div></li>
+        <li><div><p><b>Pay</b> with the command step 2 printed. It looks like this, and prints the transaction and the weather.</p>
           <pre><code>X402_MNEMONIC='&lt;mnemonic&gt;' npx github:gnoverse/x402#client/v0.5.0 <span data-url>&lt;this page's URL&gt;</span></code></pre></div></li>
       </ol>
       <p>Both commands need git and Node 22.18+ or 24.11+. Running the buyer from a clone, or against another node, is in the <a href="https://github.com/gnoverse/x402/tree/main/examples/weather#paying-it">weather example's README</a>.</p>
