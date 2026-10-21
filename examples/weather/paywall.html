@@ -21,9 +21,9 @@
   --x-gutter:48px;--x-masthead:73px;
   /* --x-grow scales the hero on a window taller than 900px, by no more than the width past 1382px lets
      the headline's 5.5vw ceiling grow (.07/.055 per px). --x-hero-content is the closed hero's height
-     from 1382px wide; re-measure its 718px and .591 if the hero changes. */
+     from 1382px wide; re-measure its 780px and .612 if the hero changes. */
   --x-grow:clamp(0px,min(var(--x-screen,100vh) - 900px,(100vw - 1382px)/1.273),540px);
-  --x-dial:calc(270px + var(--x-grow)*.4);--x-hero-content:calc(718px + var(--x-grow)*.591);
+  --x-dial:calc(270px + var(--x-grow)*.4);--x-hero-content:calc(780px + var(--x-grow)*.612);
 }
 @media (prefers-color-scheme:dark){:root{
   --x-paper:#132b26;--x-ink:#e4eddf;--x-muted:#b2c4b9;--x-line:#4c6c5e;--x-panel:#203c32;
@@ -94,6 +94,7 @@ pre code{font-size:inherit}
 .sky:has(#pay-result:not([hidden])) .badge{background:var(--x-accent);color:var(--x-on-face);box-shadow:inset 0 0 0 1px var(--x-accent-edge)}
 .headline{margin-top:26px;font-family:var(--x-display);font-size:clamp(44px,5.5vw,calc(76px + var(--x-grow)*.07));letter-spacing:-.055em;line-height:1.04}
 .intro{max-width:calc(480px + var(--x-grow)*.25);margin-top:22px;color:var(--x-muted);font-size:calc(16px + var(--x-grow)*.007)}
+.gloss + .intro{margin-top:12px}
 /* The exchange a payment walks through. paywall.js names the step it is on in
    the sky's data-step; without one the page rests on the unpaid request. */
 .track{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));margin:24px 0 0;padding:0;list-style:none}
@@ -251,6 +252,9 @@ footer{margin-top:40px;padding-top:15px;border-top:1px solid var(--x-line);color
   .sky[data-forecast] .served{display:block}
   .headline{margin-top:20px;font-size:clamp(34px,8.6vw,56px)}
   .intro{margin-top:16px}
+  /* The gloss follows the offer, so a 360x740 screen still shows the offer's first action. */
+  .gloss{order:4;margin-top:32px}
+  .gloss + .intro{margin-top:16px}
   .track{grid-template-columns:repeat(2,minmax(0,1fr));row-gap:14px}
   .instrument{flex-direction:row;align-items:flex-start;gap:18px;margin-top:24px}
   .dial-caption{margin-top:10px;font-size:11px;letter-spacing:.1em}
@@ -311,6 +315,7 @@ footer{margin-top:40px;padding-top:15px;border-top:1px solid var(--x-line);color
       <div>
         <p class="eyebrow mono"><span class="badge"><span class="unpaid">402</span><span class="settled">200</span></span><span class="unpaid unsent">PAYMENT REQUIRED</span><span class="sent">PAYMENT SENT · NOT CONFIRMED</span><span class="settled">OK · PAYMENT SETTLED</span></p>
         <h1 class="headline">x402 on Gno:<br>pay per HTTP request.</h1>
+        <p class="intro gloss">x402 lets a server charge for each HTTP request, here on the Gno blockchain. A payment settles once the chain makes the transfer.</p>
         <p class="intro"><span class="unpaid">Sign a payment for one weather request, then get the data once it settles.</span><span class="settled">You signed one payment, the seller's facilitator settled it, and the weather came back.</span> A script or an agent pays the same price over HTTP, with no account and no API key.</p>
         <ol class="track" aria-label="The payment, step by step">
           <li data-step="402"><code>402</code><br>GET /weather names its price</li>

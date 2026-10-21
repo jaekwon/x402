@@ -141,12 +141,13 @@ omitted.
 
 A browser gets a page instead (`paywall.html`): a masthead naming it an unaudited, pre-release
 testnet demo with sample weather data, or a local demo on a `dev` chain, and linking this
-repository, then the 402, the four steps of
+repository, then the 402, two plain sentences on what x402 and settling are, the four steps of
 the exchange (402, sign, retry, 200), a dial waiting for the reading, and the terms beside it: the
 price in GNOT, then in ugnot with what a ugnot is, the network and, on `onyx-1`, its faucet, the
 payee, and how to pay. On a window 800px wide or less the steps and the dial follow the offer,
-which stays put as they appear: the dial once paid, the steps once a payment starts. Once paid,
-the receipt there names the reading too, since the dial is then out of view. A touch
+which stays put as they appear: the dial once paid, the steps once a payment starts. The
+sentences on x402 follow it there too, so a 360x740 screen still shows the offer's first action.
+Once paid, the receipt there names the reading too, since the dial is then out of view. A touch
 screen pays on neither path, so there the offer says paying
 takes a computer and links how it works; its main button sends the page on to one through the share
 sheet or the clipboard, and a second says how to pay from code. The faucet line, Adena's install

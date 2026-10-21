@@ -255,6 +255,25 @@ func TestThePageDescribesTheDemoAsUnaudited(t *testing.T) {
 	assert.Regexp(t, `<meta name="description" content="[^"]*sample weather[^"]*unaudited[^"]*">`, head)
 }
 
+// A visitor new to both meets x402, Gno and settling at the top of the page,
+// so the hero says what each is in plain words before the intro uses them.
+func TestTheHeroExplainsItsTermsBeforeTheIntro(t *testing.T) {
+	gnofacilitator := httptest.NewServer(facilitator.New(unreachableChain{}, exacttest.ChainID).Handler())
+	t.Cleanup(gnofacilitator.Close)
+	sellerURL, _ := weatherSeller(t, gnofacilitator.URL)
+
+	_, page := browserPage(t, sellerURL)
+
+	_, hero, found := strings.Cut(page, `<h1 class="headline">`)
+	require.True(t, found, "the headline is gone")
+	gloss, intro, found := strings.Cut(hero, `<p class="intro">`)
+	require.True(t, found, "the intro is gone")
+	assert.Contains(t, gloss, "x402 lets a server charge for each HTTP request")
+	assert.Contains(t, gloss, "the Gno blockchain")
+	assert.Contains(t, gloss, "settles once the chain makes the transfer")
+	assert.Contains(t, intro, "once it settles")
+}
+
 // The mechanism has had no audit, which a visitor who reads only the first
 // strip of the page must learn too.
 func TestTheMastheadSaysTheMechanismIsUnaudited(t *testing.T) {
