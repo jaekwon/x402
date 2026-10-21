@@ -449,6 +449,7 @@ function fakePage() {
     "paid-temp": element(),
     "paid-forecast": element(),
     "paid-icon": element(),
+    "send-link": element(),
   };
   const copyable = element();
   const urls = [element(), element()];
@@ -727,6 +728,49 @@ describe("start, a payment that may still settle", () => {
     expect(elements.pay.hidden).toBe(false);
     expect(elements.pay.disabled).toBe(false);
     expect(elements.sky.dataset.step).toBeUndefined();
+  });
+});
+
+// A phone pays on neither path, Adena being a desktop extension and the buyer a
+// terminal command, so the page hands its own link on to a computer.
+describe("start, sending the page to a computer", () => {
+  it("hands this page's link to the share sheet where there is one", async () => {
+    const { document, window, elements } = fakePage();
+    window.location = new globalThis.URL(`${URL}#how`);
+    window.navigator.share = vi.fn(async () => {});
+    start(document, window);
+
+    await elements["send-link"].listeners.click();
+
+    expect(window.navigator.share).toHaveBeenCalledWith(expect.objectContaining({ url: URL }));
+  });
+
+  it("copies this page's link where there is no share sheet", async () => {
+    const { document, window, elements } = fakePage();
+    window.navigator.clipboard = { writeText: vi.fn(async () => {}) };
+    start(document, window);
+
+    await elements["send-link"].listeners.click();
+
+    expect(window.navigator.clipboard.writeText).toHaveBeenCalledWith(URL);
+    expect(elements["send-link"].textContent).toBe("Link copied");
+  });
+
+  // Dismissing the share sheet rejects its promise, and that is the visitor's
+  // choice, not a failure to report.
+  it("stays quiet when the share sheet is dismissed", async () => {
+    const { document, window, elements } = fakePage();
+    window.navigator.share = vi.fn(async () => {
+      throw new DOMException("Share canceled", "AbortError");
+    });
+    window.navigator.clipboard = { writeText: vi.fn(async () => {}) };
+    start(document, window);
+    elements["send-link"].textContent = "Send this page to a computer";
+
+    await elements["send-link"].listeners.click();
+
+    expect(window.navigator.clipboard.writeText).not.toHaveBeenCalled();
+    expect(elements["send-link"].textContent).toBe("Send this page to a computer");
   });
 });
 

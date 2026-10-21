@@ -143,8 +143,11 @@ A browser gets a page instead (`paywall.html`): a masthead naming it a testnet d
 weather data and linking this repository, then the 402, the four steps of the exchange (402, sign,
 retry, 200), a dial waiting for the reading, and the terms beside it: the price in GNOT, the network
 and the faucet, the payee, and how to pay. On a phone the dial shows only once paid, and the steps
-only once a payment starts. The middleware's own paywall supports EVM and Solana chains only. In a
-browser with the [Adena](https://adena.app) wallet, a visitor pays from the page. A line beside the
+only once a payment starts. A touch screen pays on neither path, so there the offer says paying
+takes a computer, links how it works, and sends the page on to one through the share sheet or the
+clipboard; the faucet line and Adena's install link wait for that computer. The middleware's own
+paywall supports EVM and Solana chains only. In a browser with the [Adena](https://adena.app)
+wallet, a visitor pays from the page. A line beside the
 offer says what Adena does there: it only signs, and the seller's facilitator, which holds no key,
 checks the payment and broadcasts it. `paywall.js` works as a stock x402 client does: it reads the
 terms, has Adena sign the bank send without broadcasting it, and repeats the request with the

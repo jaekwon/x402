@@ -294,6 +294,33 @@ export function start(document, window) {
     }
   }
 
+  // A phone pays on neither path, Adena being a desktop extension and the buyer
+  // a terminal command, so the page hands its own link to the share sheet, or to
+  // the clipboard where there is none, for a computer to open.
+  const send = document.getElementById("send-link");
+  send.addEventListener("click", async () => {
+    if (window.navigator.share !== undefined) {
+      try {
+        await window.navigator.share({ title: document.title, url: here });
+        return;
+      } catch (err) {
+        // A dismissed sheet is the visitor's choice; any other failure falls back
+        // to the clipboard.
+        if (err?.name === "AbortError") {
+          return;
+        }
+      }
+    }
+    const label = send.textContent;
+    try {
+      await window.navigator.clipboard.writeText(here);
+      send.textContent = "Link copied";
+    } catch {
+      send.textContent = "Copy failed";
+    }
+    window.setTimeout(() => (send.textContent = label), 1500);
+  });
+
   const terms = document.getElementById("terms");
   let termsRead = false;
   let termsReading = false;
