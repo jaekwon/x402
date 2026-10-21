@@ -409,7 +409,6 @@ export function start(document, window) {
       if (paid.paid) {
         sky.dataset.step = "200";
         document.title = document.title.replace(TITLE_UNPAID, TITLE_SETTLED);
-        withdraw("paid");
         result.querySelector("code").textContent = paid.body;
         result.hidden = false;
         const reading = readingOf(paid.body);
@@ -419,6 +418,7 @@ export function start(document, window) {
           document.getElementById("paid-icon").setAttribute("href", `#i-${reading.forecast}`);
           sky.dataset.forecast = reading.forecast;
         }
+        withdraw("paid");
       } else if (UNSETTLED.includes(paid.reason)) {
         withdraw("pending");
       } else {

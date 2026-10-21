@@ -143,8 +143,9 @@ A browser gets a page instead (`paywall.html`): a masthead naming it an unaudite
 testnet demo with sample weather data and linking this repository, then the 402, the four steps of
 the exchange (402, sign, retry, 200), a dial waiting for the reading, and the terms beside it: the
 price in GNOT, then in ugnot with what a ugnot is, the network and, on `onyx-1`, its faucet, the
-payee, and how to pay. On a phone the dial shows only once paid, and the steps
-only once a payment starts. A touch screen pays on neither path, so there the offer says paying
+payee, and how to pay. On a window 800px wide or less the steps and the dial follow the offer,
+which stays put as they appear: the dial once paid, the steps once a payment starts. A touch
+screen pays on neither path, so there the offer says paying
 takes a computer, links how it works, and sends the page on to one through the share sheet or the
 clipboard; the faucet line, Adena's install link and the steps to it wait for that computer. The middleware's own
 paywall supports EVM and Solana chains only. In a browser with the [Adena](https://adena.app)

@@ -232,7 +232,13 @@ footer{margin-top:40px;padding-top:15px;border-top:1px solid var(--x-line);color
   .masthead{display:grid;grid-template-columns:minmax(0,1fr) auto;min-height:0;padding:16px 0}
   .edition{grid-row:2;grid-column:1/-1;text-align:left}
   .masthead .how{display:none}
-  .hero{grid-template-columns:minmax(0,1fr);min-height:0;padding-top:26px}
+  .hero{grid-template-columns:minmax(0,1fr);gap:0;min-height:0;padding-top:26px}
+  /* The steps and the gauge follow the offer, so neither pushes the pay button or the receipt
+     down as it appears during a payment. */
+  .hero > div{display:contents}
+  .offer{order:1;margin-top:32px}
+  .track{order:2;margin-top:32px}
+  .instrument{order:3}
   .headline{margin-top:20px;font-size:clamp(34px,8.6vw,56px)}
   .intro{margin-top:16px}
   .track{grid-template-columns:repeat(2,minmax(0,1fr));row-gap:14px}

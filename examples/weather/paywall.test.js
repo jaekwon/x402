@@ -616,6 +616,23 @@ describe("start, paying", () => {
     expect(elements["pay-status"].focused).toBe(true);
   });
 
+  // Focus scrolls the receipt into view, so it waits for the response and the
+  // reading: drawn after it, they could push the receipt off the screen.
+  it("moves focus to the receipt only once the reading is drawn", async () => {
+    const { document, window, elements } = fakePage();
+    let drawn;
+    elements["pay-status"].focus = () => {
+      drawn = { response: !elements["pay-result"].hidden, forecast: elements.sky.dataset.forecast };
+    };
+    window.adena = fakeAdena();
+    window.fetch = fakeSeller(terms(), settled);
+    start(document, window);
+
+    await elements.pay.listeners.click();
+
+    expect(drawn).toEqual({ response: true, forecast: "sunny" });
+  });
+
   // A tab left open after paying would otherwise still say payment is required.
   it("names the settled payment in the tab once paid", async () => {
     const { document } = await paidPage(WEATHER);
