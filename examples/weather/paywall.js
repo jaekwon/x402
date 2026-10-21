@@ -164,7 +164,7 @@ export async function payWithAdena({ adena, fetch: fetchFn, url, report = () => 
   } catch (err) {
     const cause = err instanceof Error ? err.message : String(err);
     throw new PaymentUnanswered(
-      `The payment was sent, but no answer came back (${cause}). Check the account before paying again.`,
+      `The payment was sent, but no answer came back (${cause}). Check the account, and if the payment never left it, reload this page to pay again.`,
     );
   }
 
@@ -212,10 +212,10 @@ export function statusLine(result) {
     return `Paid on ${result.network}. Transaction ${result.transaction}.`;
   }
   if (result.reason === "settlement_pending") {
-    return `Sent, not settled yet: the chain has the payment but has not run it, so the weather was held back. Transaction ${result.transaction} may still go through; check it before paying again (settlement_pending).`;
+    return `Sent, not settled yet: the chain has the payment but has not run it, so the weather was held back. Transaction ${result.transaction} may still go through. Check it, and if it does not, reload this page to pay again (settlement_pending).`;
   }
   if (result.reason === "duplicate_settlement") {
-    return "Already settling: this payment is being settled or was settled. Check the account before paying again (duplicate_settlement).";
+    return "Already settling: this payment is being settled or was settled. Check the account, and if the payment never left it, reload this page to pay again (duplicate_settlement).";
   }
   const remedy = REMEDIES.get(result.reason);
   if (remedy !== undefined) {
@@ -280,6 +280,7 @@ const ADENA_POLL_MS = 250;
 // The tab leads with the payment's state, as the badge does.
 const TITLE_UNPAID = "Payment required";
 const TITLE_SETTLED = "Payment settled";
+const TITLE_SENT = "Payment sent";
 
 /** Wires the page: this page's URL, copy buttons, the live terms, and Adena. */
 export function start(document, window) {
@@ -386,6 +387,7 @@ export function start(document, window) {
   // the status line, since the button that held it is gone.
   const withdraw = (outcome) => {
     status.dataset.outcome = outcome;
+    document.title = document.title.replace(TITLE_UNPAID, outcome === "paid" ? TITLE_SETTLED : TITLE_SENT);
     button.hidden = true;
     status.focus();
   };
@@ -410,7 +412,6 @@ export function start(document, window) {
       showStatus(document, status, statusLine(paid), paid.transaction);
       if (paid.paid) {
         sky.dataset.step = "200";
-        document.title = document.title.replace(TITLE_UNPAID, TITLE_SETTLED);
         result.querySelector("code").textContent = paid.body;
         result.hidden = false;
         const reading = readingOf(paid.body);

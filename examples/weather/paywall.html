@@ -87,6 +87,10 @@ pre code{font-size:inherit}
 /* paywall.js reveals #pay-result only for a settled payment. */
 .sky:has(#pay-result:not([hidden])) .settled{display:inline}
 .sky:has(#pay-result:not([hidden])) .unpaid{display:none}
+/* A payment that may still settle is marked pending on the status line: sent, not confirmed. */
+.sent{display:none}
+.sky:has(#pay-status[data-outcome=pending]) .sent{display:inline}
+.sky:has(#pay-status[data-outcome=pending]) .unsent{display:none}
 .sky:has(#pay-result:not([hidden])) .badge{background:var(--x-accent);color:var(--x-on-face);box-shadow:inset 0 0 0 1px var(--x-accent-edge)}
 .headline{margin-top:26px;font-family:var(--x-display);font-size:clamp(44px,5.5vw,calc(76px + var(--x-grow)*.07));letter-spacing:-.055em;line-height:1.04}
 .intro{max-width:calc(480px + var(--x-grow)*.25);margin-top:22px;color:var(--x-muted);font-size:calc(16px + var(--x-grow)*.007)}
@@ -297,7 +301,7 @@ footer{margin-top:40px;padding-top:15px;border-top:1px solid var(--x-line);color
   <main>
     <div class="hero">
       <div>
-        <p class="eyebrow mono"><span class="badge"><span class="unpaid">402</span><span class="settled">200</span></span><span class="unpaid">PAYMENT REQUIRED</span><span class="settled">OK · PAYMENT SETTLED</span></p>
+        <p class="eyebrow mono"><span class="badge"><span class="unpaid">402</span><span class="settled">200</span></span><span class="unpaid unsent">PAYMENT REQUIRED</span><span class="sent">PAYMENT SENT · NOT CONFIRMED</span><span class="settled">OK · PAYMENT SETTLED</span></p>
         <h1 class="headline">x402 on Gno:<br>pay per HTTP request.</h1>
         <p class="intro"><span class="unpaid">Sign a payment for one weather request, then get the data once it settles.</span><span class="settled">You signed one payment, the seller's facilitator settled it, and the weather came back.</span> A script or an agent pays the same price over HTTP, with no account and no API key.</p>
         <ol class="track" aria-label="The payment, step by step">
@@ -320,7 +324,7 @@ footer{margin-top:40px;padding-top:15px;border-top:1px solid var(--x-line);color
                 <p class="temp"><span class="awaiting">—</span><span id="paid-temp"></span>°</p>
               </div>
             </div>
-            <p class="dial-caption mono"><span class="awaiting">Awaiting payment</span><span class="reading"><span id="paid-forecast"></span> / Celsius</span></p>
+            <p class="dial-caption mono"><span class="awaiting">Awaiting <span class="unsent">payment</span><span class="sent">confirmation</span></span><span class="reading"><span id="paid-forecast"></span> / Celsius</span></p>
           </div>
           <div class="reading-copy">
             <p class="reading-title"><span class="awaiting">The sample reading.</span><span class="reading">The reading you paid for.</span></p>

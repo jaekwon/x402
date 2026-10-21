@@ -351,6 +351,17 @@ describe("payWithAdena, again", () => {
     await expect(payWithAdena({ adena: fakeAdena(), fetch: seller, url: URL })).rejects.toThrow(/was sent/);
   });
 
+  // Every way to pay is withdrawn then, so the message is the only way on.
+  it("says how to pay again when the answer to a payment is lost", async () => {
+    const seller = fakeSeller(terms(), () => {
+      throw new TypeError("Failed to fetch");
+    });
+
+    await expect(payWithAdena({ adena: fakeAdena(), fetch: seller, url: URL })).rejects.toThrow(
+      /if the payment never left it, reload this page to pay again\.$/,
+    );
+  });
+
   it("asks nothing of any host but the page's own", async () => {
     const seller = fakeSeller(terms(), settled);
 
@@ -375,6 +386,20 @@ describe("statusLine", () => {
 
     expect(line).toContain(TX_HASH);
     expect(line).not.toMatch(/^Not paid/);
+  });
+
+  // Every way to pay is withdrawn while a payment may still settle, so the line
+  // names the only way on: checking the payment, then reloading only if it
+  // never went through.
+  it("says how to pay again when a payment may still settle", () => {
+    for (const [reason, transaction] of [
+      ["settlement_pending", TX_HASH],
+      ["duplicate_settlement", ""],
+    ]) {
+      expect(statusLine({ paid: false, status: 402, transaction, reason })).toMatch(
+        /, reload this page to pay again \((settlement_pending|duplicate_settlement)\)\.$/,
+      );
+    }
   });
 
   it("gives the reason a payment was refused", () => {
@@ -772,6 +797,30 @@ describe("start, a payment that may still settle", () => {
 
     expect(elements["pay-status"].textContent).toMatch(/was sent/);
     expect(elements.pay.hidden).toBe(true);
+  });
+
+  // The tab would otherwise still say payment is required for a payment that
+  // may have gone through.
+  it("names a payment that may still settle as sent in the tab", async () => {
+    const duplicate = () =>
+      new Response("{}", {
+        status: 402,
+        headers: { "PAYMENT-RESPONSE": encodeHeader({ success: false, errorReason: "duplicate_settlement" }) },
+      });
+    const lost = () => {
+      throw new TypeError("Failed to fetch");
+    };
+    for (const answer of [pending, duplicate, lost]) {
+      const { document, window, elements } = fakePage();
+      window.adena = fakeAdena();
+      window.fetch = fakeSeller(terms(), answer);
+      start(document, window);
+
+      await elements.pay.listeners.click();
+
+      expect(document.title).toBe("Payment sent · x402 on Gno testnet demo");
+      expect(elements.pay.hidden).toBe(true);
+    }
   });
 
   // The button is disabled while a payment runs, which drops its focus.

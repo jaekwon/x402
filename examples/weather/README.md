@@ -161,7 +161,9 @@ weather; the response body and the transaction show below, the transaction linke
 `onyx-1`. The offer then becomes the receipt and offers no second payment: it points on to selling
 an endpoint in gno and to paying from code. A payment that may still settle, or whose answer never
 came back, withdraws the button and the link to pay from code too, and keeps the steps on the
-retry; a pending one links its transaction. A refusal says what to do before the reason's code and
+retry; a pending one links its transaction. The line beside the badge, the dial and the tab then
+say the payment was sent and is not confirmed, and the status line ends on reloading to pay again
+only if the payment never went through. A refusal says what to do before the reason's code and
 gives the button back. A body that is not one of the four forecasts the page draws (sunny, cloudy, rain, snow) shows
 only as served. Without Adena, the offer leads with paying from code, a link down to its steps, and
 offers Adena second, with a link to adena.app and three steps: install it, create and fund an

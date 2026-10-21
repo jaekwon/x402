@@ -519,6 +519,25 @@ func TestEveryElementThePaymentScriptFindsIsOnThePage(t *testing.T) {
 	}
 }
 
+// A payment that may still settle is neither due nor settled, so the status
+// beside the badge and the empty dial's caption have words for it.
+func TestThePageHasWordsForAPaymentThatMayStillSettle(t *testing.T) {
+	gnofacilitator := httptest.NewServer(facilitator.New(unreachableChain{}, exacttest.ChainID).Handler())
+	t.Cleanup(gnofacilitator.Close)
+	sellerURL, _ := weatherSeller(t, gnofacilitator.URL)
+
+	_, page := browserPage(t, sellerURL)
+
+	_, eyebrow, found := strings.Cut(page, `<p class="eyebrow mono">`)
+	require.True(t, found, "the status beside the badge is gone")
+	eyebrow, _, _ = strings.Cut(eyebrow, "</p>")
+	assert.Contains(t, eyebrow, `<span class="sent">PAYMENT SENT · NOT CONFIRMED</span>`)
+	_, caption, found := strings.Cut(page, `<p class="dial-caption mono">`)
+	require.True(t, found, "the dial's caption is gone")
+	caption, _, _ = strings.Cut(caption, "</p>")
+	assert.Contains(t, caption, `<span class="sent">confirmation</span>`)
+}
+
 // A class the script gives an element does nothing unless the page styles it:
 // the transaction's screen-reader form would show beside the hash it stands for.
 func TestEveryClassThePaymentScriptSetsIsStyled(t *testing.T) {
