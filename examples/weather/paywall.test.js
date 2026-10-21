@@ -178,7 +178,7 @@ describe("payWithAdena", () => {
     });
 
     await expect(payWithAdena({ adena, fetch: fakeSeller(terms(), settled), url: URL })).rejects.toThrow(
-      /onyx-1/,
+      "Adena has no network onyx-1: add it as a custom network in Adena, then pay again.",
     );
     expect(adena.SignTx).not.toHaveBeenCalled();
   });
@@ -189,8 +189,31 @@ describe("payWithAdena", () => {
     });
     const seller = fakeSeller(terms(), settled);
 
-    await expect(payWithAdena({ adena, fetch: seller, url: URL })).rejects.toThrow(/User rejected/);
+    await expect(payWithAdena({ adena, fetch: seller, url: URL })).rejects.toThrow(
+      "Declined in Adena: nothing was signed or sent.",
+    );
     expect(seller).toHaveBeenCalledTimes(1);
+  });
+
+  // Adena's own messages name its internals; the payer needs what happened to
+  // the payment and what to do. The types are @adena-wallet/sdk's.
+  it("says in plain words why Adena stopped a payment", async () => {
+    const failure = (type, message) => ({ code: 4000, status: "failure", type, message, data: null });
+    for (const [call, type, said] of [
+      ["AddEstablish", "CONNECTION_REJECTED", "Adena did not connect to this page: nothing was signed or sent."],
+      ["SwitchNetwork", "SWITCH_NETWORK_REJECTED", "Adena stayed on its network: nothing was signed or sent."],
+      ["GetAccount", "WALLET_LOCKED", "Adena is locked: unlock it, then pay again."],
+      ["GetAccount", "NO_ACCOUNT", "Adena has no account yet: create one, then pay again."],
+      ["SignTx", "SIGN_REJECTED", "Declined in Adena: nothing was signed or sent."],
+      ["SignTx", "UNRESOLVED_TRANSACTION_EXISTS", "Adena: An unresolved transaction pop-up exists."],
+    ]) {
+      const adena = fakeAdena({ chainId: "dev" });
+      adena[call].mockResolvedValue(failure(type, type === "UNRESOLVED_TRANSACTION_EXISTS" ? "An unresolved transaction pop-up exists." : ""));
+      const seller = fakeSeller(terms(), settled);
+
+      await expect(payWithAdena({ adena, fetch: seller, url: URL })).rejects.toThrow(said);
+      expect(seller).toHaveBeenCalledTimes(1);
+    }
   });
 
   it("reports the reason a refused payment came back with", async () => {
@@ -276,7 +299,7 @@ describe("payWithAdena", () => {
     });
 
     await expect(payWithAdena({ adena, fetch: fakeSeller(terms(), settled), url: URL })).rejects.toThrow(
-      /User rejected/,
+      "Adena stayed on its network: nothing was signed or sent.",
     );
     expect(adena.SignTx).not.toHaveBeenCalled();
   });
@@ -402,10 +425,17 @@ describe("statusLine", () => {
     }
   });
 
-  it("gives the reason a payment was refused", () => {
+  // A refusal without a hash never reached a block, so nothing left the account.
+  it("says a refused payment spent nothing before the code that names the refusal", () => {
     expect(
       statusLine({ paid: false, status: 402, transaction: "", reason: "invalid_exact_gno_payload_amount_mismatch" }),
-    ).toBe("Not paid (402): invalid_exact_gno_payload_amount_mismatch");
+    ).toBe(
+      "Not paid, and nothing was spent: the seller refused this payment (invalid_exact_gno_payload_amount_mismatch).",
+    );
+  });
+
+  it("ends an answer that gave no reason on a full stop", () => {
+    expect(statusLine({ paid: false, status: 500, transaction: "", reason: "" })).toBe("Not paid (500).");
   });
 
   // A block executed the payment and the chain refused it, so nothing more will
@@ -681,7 +711,7 @@ describe("start, paying", () => {
 
     await elements.pay.listeners.click();
 
-    expect(elements["pay-status"].textContent).toBe("Adena: User rejected");
+    expect(elements["pay-status"].textContent).toBe("Declined in Adena: nothing was signed or sent.");
     expect(elements["pay-result"].hidden).toBe(true);
     expect(elements.pay.disabled).toBe(false);
     expect(elements.pay.hidden).toBe(false);

@@ -90,11 +90,26 @@ function gnoOffer(terms) {
 // A payment sent whose answer never came back, which may have settled.
 class PaymentUnanswered extends Error {}
 
+// What Adena's refusals mean to the payer, by the type Adena gives them. Each
+// stops the payment before anything is signed or sent.
+const ADENA_REFUSALS = new Map([
+  ["CONNECTION_REJECTED", "Adena did not connect to this page: nothing was signed or sent."],
+  ["SWITCH_NETWORK_REJECTED", "Adena stayed on its network: nothing was signed or sent."],
+  ["WALLET_LOCKED", "Adena is locked: unlock it, then pay again."],
+  ["NO_ACCOUNT", "Adena has no account yet: create one, then pay again."],
+  ["TRANSACTION_REJECTED", "Declined in Adena: nothing was signed or sent."],
+  ["SIGN_REJECTED", "Declined in Adena: nothing was signed or sent."],
+]);
+
 // Adena answers ALREADY_CONNECTED and REDUNDANT_CHANGE_REQUEST as failures
 // although they mean the wallet is already where the page wants it.
 function expectSuccess(response, alsoFine = []) {
   if (response?.status === "success" || alsoFine.includes(response?.type)) {
     return response.data;
+  }
+  const plain = ADENA_REFUSALS.get(response?.type);
+  if (plain !== undefined) {
+    throw new Error(plain);
   }
   const said = firstText(response?.message, response?.type);
   throw new Error(`Adena: ${said === "" ? "no answer" : said}`);
@@ -126,7 +141,7 @@ export async function payWithAdena({ adena, fetch: fetchFn, url, report = () => 
     report(`Switching Adena to ${chainId}…`, "sign");
     const switched = await adena.SwitchNetwork(chainId);
     if (switched?.type === "UNADDED_NETWORK") {
-      throw new Error(`Adena has no network ${chainId}; add it in Adena, then pay again`);
+      throw new Error(`Adena has no network ${chainId}: add it as a custom network in Adena, then pay again.`);
     }
     expectSuccess(switched, ["REDUNDANT_CHANGE_REQUEST"]);
   }
@@ -224,7 +239,11 @@ export function statusLine(result) {
   if (result.transaction !== "") {
     return `Not paid: the chain refused transaction ${result.transaction} (${result.reason}).`;
   }
-  return `Not paid (${result.status})${result.reason === "" ? "" : `: ${result.reason}`}`;
+  // Without a hash the payment never reached a block, so nothing left the account.
+  if (result.reason !== "") {
+    return `Not paid, and nothing was spent: the seller refused this payment (${result.reason}).`;
+  }
+  return `Not paid (${result.status}).`;
 }
 
 // showStatus writes line into the status line, its transaction linked to the
