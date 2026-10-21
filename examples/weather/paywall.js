@@ -440,6 +440,7 @@ export function start(document, window) {
           document.getElementById("paid-temp").textContent = String(reading.celsius);
           document.getElementById("paid-forecast").textContent = reading.forecast;
           document.getElementById("paid-icon").setAttribute("href", `#i-${reading.forecast}`);
+          document.getElementById("paid-reading").textContent = `${reading.celsius} °C, ${reading.forecast}`;
           sky.dataset.forecast = reading.forecast;
         }
         withdraw("paid");

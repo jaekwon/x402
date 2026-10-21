@@ -513,6 +513,7 @@ function fakePage() {
     "paid-temp": element(),
     "paid-forecast": element(),
     "paid-icon": element(),
+    "paid-reading": element(),
     "send-link": element(),
   };
   const copyable = element();
@@ -655,6 +656,19 @@ describe("start, paying", () => {
       expect(elements["paid-icon"].attributes.href).toBe(`#i-${forecast}`);
       expect(elements["paid-temp"].textContent).toBe(shown);
       expect(elements["paid-forecast"].textContent).toBe(forecast);
+    }
+  });
+
+  // On a narrow screen the dial sits below the receipt, out of view once paid.
+  it("writes the reading into the receipt too", async () => {
+    for (const [forecast, celsius, said] of [
+      ["sunny", 24, "24 °C, sunny"],
+      ["rain", 12.5, "12.5 °C, rain"],
+      ["snow", -1, "-1 °C, snow"],
+    ]) {
+      const { elements } = await paidPage(JSON.stringify({ celsius, forecast, location: "Paris" }));
+
+      expect(elements["paid-reading"].textContent).toBe(said);
     }
   });
 

@@ -279,6 +279,7 @@ func TestThePageSaysTheWeatherIsSampleData(t *testing.T) {
 	_, masthead := headAndMasthead(t, page)
 	assert.Contains(t, masthead, "sample weather data", "before paying")
 	assert.Contains(t, page, "Sample data, not a forecast", "beside the paid reading")
+	assert.Contains(t, page, `<span id="paid-reading"></span> · sample data`, "beside the reading in the receipt")
 	assert.Equal(t, "Sample weather data (demo)", termsOf(t, sellerURL).Resource.Description,
 		"the only label a script or an agent reads")
 }
