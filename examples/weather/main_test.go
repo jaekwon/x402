@@ -224,6 +224,20 @@ func TestThePageOpensOnADemoMastheadLinkingTheSource(t *testing.T) {
 	assert.NotContains(t, head+masthead, "live", "live next to weather reads as real data")
 }
 
+// The mechanism has had no audit, which a visitor who reads only the first
+// strip of the page must learn too.
+func TestTheMastheadSaysTheMechanismIsUnaudited(t *testing.T) {
+	gnofacilitator := httptest.NewServer(facilitator.New(unreachableChain{}, exacttest.ChainID).Handler())
+	t.Cleanup(gnofacilitator.Close)
+	sellerURL, _ := weatherSeller(t, gnofacilitator.URL)
+
+	_, page := browserPage(t, sellerURL)
+
+	_, masthead := headAndMasthead(t, page)
+	assert.Contains(t, masthead, "unaudited")
+	assert.Contains(t, masthead, "pre-release")
+}
+
 // The seller answers every request with the same reading, which a visitor
 // would otherwise take for the forecast they paid for.
 func TestThePageSaysTheWeatherIsSampleData(t *testing.T) {
@@ -243,9 +257,9 @@ func TestThePageSaysTheWeatherIsSampleData(t *testing.T) {
 // Adena hides the no-wallet note, so the network and where test GNOT comes
 // from must sit outside it to stay on screen.
 func TestThePageNamesTheNetworkAndTheFaucetWithOrWithoutAdena(t *testing.T) {
-	gnofacilitator := httptest.NewServer(facilitator.New(unreachableChain{}, exacttest.ChainID).Handler())
+	gnofacilitator := httptest.NewServer(facilitator.New(unreachableChain{}, "onyx-1").Handler())
 	t.Cleanup(gnofacilitator.Close)
-	sellerURL, _ := weatherSeller(t, gnofacilitator.URL)
+	sellerURL, _ := weatherSeller(t, gnofacilitator.URL, func(cfg *sellerConfig) { cfg.network = "gno:onyx-1" })
 
 	_, page := browserPage(t, sellerURL)
 
@@ -254,8 +268,21 @@ func TestThePageNamesTheNetworkAndTheFaucetWithOrWithoutAdena(t *testing.T) {
 	start := strings.Index(offer, `<section class="offer"`)
 	require.NotEqual(t, -1, start, "the offer panel is gone, or follows the no-wallet note")
 	offer = offer[start:]
-	assert.Contains(t, offer, "Test GNOT on <code>gno:dev</code>")
+	assert.Contains(t, offer, "Test GNOT on <code>gno:onyx-1</code>")
 	assert.Contains(t, offer, `href="https://faucet.gno.land"`)
+}
+
+// faucet.gno.land funds the public testnets, so on a local chain it would send
+// a visitor for coins it cannot give.
+func TestThePageNamesNoFaucetForALocalChain(t *testing.T) {
+	gnofacilitator := httptest.NewServer(facilitator.New(unreachableChain{}, exacttest.ChainID).Handler())
+	t.Cleanup(gnofacilitator.Close)
+	sellerURL, _ := weatherSeller(t, gnofacilitator.URL)
+
+	_, page := browserPage(t, sellerURL)
+
+	assert.Contains(t, page, "Test GNOT on <code>gno:dev</code>")
+	assert.NotContains(t, page, "faucet.gno.land")
 }
 
 // Paying from code needs no wallet, so the offer points to it whether Adena is
@@ -282,9 +309,37 @@ func TestTheOfferPointsToPayingFromCodeWithOrWithoutAdena(t *testing.T) {
 	assert.Contains(t, page, `id="code"`)
 }
 
+// Adena reaches only the pages loaded after it is installed, so a visitor
+// without it gets the steps to it, the last one reloading this page.
+func TestWithoutAdenaThePageListsTheStepsToIt(t *testing.T) {
+	gnofacilitator := httptest.NewServer(facilitator.New(unreachableChain{}, exacttest.ChainID).Handler())
+	t.Cleanup(gnofacilitator.Close)
+	sellerURL, _ := weatherSeller(t, gnofacilitator.URL)
+
+	_, page := browserPage(t, sellerURL)
+
+	_, noAdena, found := strings.Cut(page, `<div id="no-adena"`)
+	require.True(t, found, "the no-wallet note is gone")
+	noAdena, _, found = strings.Cut(noAdena, "</div>")
+	require.True(t, found, "the no-wallet note never closes")
+	assert.Contains(t, noAdena, `href="https://adena.app"`)
+	_, setup, found := strings.Cut(noAdena, "<ol")
+	require.True(t, found, "no steps to Adena")
+	setup, _, found = strings.Cut(setup, "</ol>")
+	require.True(t, found, "the steps never close")
+	steps := strings.Split(setup, "<li>")[1:]
+	require.Len(t, steps, 3)
+	assert.Contains(t, steps[2], "Reload this page")
+}
+
 func TestATransactionLinksToTheExplorerOfTheChainsItKnows(t *testing.T) {
 	assert.Equal(t, "https://gnoscan.io/transactions/details?chainId=onyx-1&txhash=", explorerTxURL("onyx-1"))
 	assert.Empty(t, explorerTxURL("dev"), "a local chain has no explorer")
+}
+
+func TestTheFaucetIsNamedForTheChainsItFunds(t *testing.T) {
+	assert.Equal(t, "faucet.gno.land", faucetHost("onyx-1"))
+	assert.Empty(t, faucetHost("dev"), "no public faucet funds a local chain")
 }
 
 // The page hands the explorer to the script on the status line, and an empty
@@ -353,6 +408,24 @@ func TestThePageSaysToReadTheBuyerBeforeRunningIt(t *testing.T) {
 	before := page[:firstRun]
 	assert.Contains(t, before, `href="https://github.com/gnoverse/x402/blob/main/examples/weather/buy.mjs"`)
 	assert.Contains(t, before, "never give it a mnemonic that holds anything")
+}
+
+// A snippet is copied into someone's own code, often by a reader who landed on
+// its section from a link, so the warning sits right before each one: after
+// the code or the heading that precedes it.
+func TestEverySnippetFollowsTheWarning(t *testing.T) {
+	gnofacilitator := httptest.NewServer(facilitator.New(unreachableChain{}, exacttest.ChainID).Handler())
+	t.Cleanup(gnofacilitator.Close)
+	sellerURL, _ := weatherSeller(t, gnofacilitator.URL)
+
+	_, page := browserPage(t, sellerURL)
+
+	chunks := strings.Split(page, `<pre class="snippet"`)
+	require.Greater(t, len(chunks), 1, "the page shows no snippet")
+	for _, before := range chunks[:len(chunks)-1] {
+		since := max(strings.LastIndex(before, "</pre>"), strings.LastIndex(before, "<h2"))
+		assert.Contains(t, before[since+1:], "The mechanism is unaudited and pre-release")
+	}
 }
 
 // The page pays through the script the seller inlines, so it must arrive
@@ -526,6 +599,44 @@ func TestTheAmountIsShownInGNOT(t *testing.T) {
 			assert.Equal(t, want, [2]string{amount, unit})
 		})
 	}
+}
+
+// pricePanel returns the page's price, from the amount to the network line
+// below it.
+func pricePanel(t *testing.T, page string) string {
+	t.Helper()
+	_, price, found := strings.Cut(page, `<p class="price">`)
+	require.True(t, found, "the price is gone")
+	price, _, found = strings.Cut(price, `<p class="net">`)
+	require.True(t, found, "the network line no longer follows the price")
+	return price
+}
+
+// The terms count in ugnot, and the price is where a visitor meets it first.
+func TestThePriceSaysWhatAUgnotIs(t *testing.T) {
+	gnofacilitator := httptest.NewServer(facilitator.New(unreachableChain{}, exacttest.ChainID).Handler())
+	t.Cleanup(gnofacilitator.Close)
+	sellerURL, _ := weatherSeller(t, gnofacilitator.URL)
+
+	_, page := browserPage(t, sellerURL)
+
+	price := pricePanel(t, page)
+	assert.Contains(t, price, "<code>250000ugnot</code>")
+	assert.Contains(t, price, "a millionth of a GNOT")
+}
+
+// GNOT is a name for ugnot only, so another denomination's price says nothing
+// about GNOT.
+func TestAPriceInAnotherDenominationIsNotExplainedInGNOT(t *testing.T) {
+	gnofacilitator := httptest.NewServer(facilitator.New(unreachableChain{}, exacttest.ChainID).Handler())
+	t.Cleanup(gnofacilitator.Close)
+	sellerURL, _ := weatherSeller(t, gnofacilitator.URL, func(cfg *sellerConfig) { cfg.price = std.MustParseCoin("500atom") })
+
+	_, page := browserPage(t, sellerURL)
+
+	price := pricePanel(t, page)
+	assert.Contains(t, price, "<code>500atom</code>")
+	assert.NotContains(t, price, "GNOT")
 }
 
 // A browser asks for /favicon.ico on its own, beside the page; the icon is not

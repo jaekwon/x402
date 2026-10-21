@@ -63,7 +63,9 @@ pre code{font-size:inherit}
 .masthead .mono{text-transform:uppercase}
 .brand{font-size:14px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;white-space:nowrap}
 .brand span{display:inline-block;width:13px;height:13px;margin-right:10px;border:1px solid currentColor;border-radius:50%;vertical-align:-1px}
-.edition{color:var(--x-muted)}
+/* The edition takes the room between the brand and the nav, wrapping there rather than
+   pushing the nav onto a line of its own. */
+.edition{flex:1 1 0;color:var(--x-muted);text-align:center}
 .masthead nav{display:flex;flex-wrap:wrap;gap:8px 24px}
 
 /* ---- The 402 and the reading */
@@ -129,13 +131,16 @@ pre code{font-size:inherit}
 
 /* ---- The offer */
 .offer{align-self:start;padding-top:18px;border-top:3px solid var(--x-ink)}
-.offer h2{margin:18px 0;font-size:calc(26px + var(--x-grow)*.016);letter-spacing:-.04em;line-height:1.2}
+.offer h2{margin:0 0 18px;font-size:calc(26px + var(--x-grow)*.016);letter-spacing:-.04em;line-height:1.2}
 .price{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 12px;margin-top:27px}
 .price strong{font-size:calc(66px + var(--x-grow)*.04);font-weight:500;letter-spacing:-.06em;line-height:1}
 .price span{font-size:calc(17px + var(--x-grow)*.007)}
 .fine{margin-top:3px;color:var(--x-muted)}
-.net,.role,#no-adena p{margin-top:14px;color:var(--x-muted);font-size:calc(13px + var(--x-grow)*.005)}
-.net code{color:var(--x-ink)}
+.coin,.net,.role,.setup,#no-adena p{margin-top:14px;color:var(--x-muted);font-size:calc(13px + var(--x-grow)*.005)}
+:is(.coin,.net) code{color:var(--x-ink)}
+.coin{margin-top:6px}
+.setup{margin-bottom:0;padding-left:18px}
+.setup li+li{margin-top:4px}
 .pay-button{display:flex;justify-content:space-between;gap:12px;width:100%;margin-top:22px;padding:calc(17px + var(--x-grow)*.012) 20px;border:1px solid var(--x-on-face);background:var(--x-accent);color:var(--x-on-face);font-size:calc(16px + var(--x-grow)*.006);font-weight:600;text-align:left;text-decoration:none}
 .pay-button:hover{filter:brightness(1.08)}
 .alt-pay{display:flex;justify-content:space-between;gap:12px;margin-top:10px;padding:13px 20px;border:1px solid var(--x-muted);color:var(--x-ink);font-size:calc(14px + var(--x-grow)*.005);text-decoration:none}
@@ -145,13 +150,13 @@ pre code{font-size:inherit}
 /* Adena pays through the script, so without it only paying from code remains. */
 @media (scripting:none){#no-adena{display:none}}
 /* A touch screen pays on neither path, so the offer says so and hands the page on to a
-   computer, where the faucet and Adena's install are needed. */
+   computer, where the faucet and Adena's setup are needed. */
 .phone-note,#send-link{display:none}
 #send-link{width:100%;background:none;text-align:left}
 @media (pointer:coarse){
   .phone-note{display:block}
   #send-link{display:flex}
-  .offer:has(#no-adena:not([hidden])) .net,#no-adena a[href^="https://adena.app"],#no-adena p:not(.phone-note){display:none}
+  .offer:has(#no-adena:not([hidden])) .net,#no-adena a[href^="https://adena.app"],.setup{display:none}
   /* Targets a finger can hit: 44px or more, the masthead's without moving its layout. */
   .copy{padding:14px 12px}
   summary{padding-block:12px}
@@ -214,8 +219,8 @@ footer{margin-top:40px;padding-top:15px;border-top:1px solid var(--x-line);color
 }
 @media (max-width:800px){
   :root{--x-gutter:22px;--x-dial:150px}
-  .masthead{display:grid;grid-template-columns:minmax(0,1fr) auto;min-height:0;padding:20px 0}
-  .edition{grid-row:2;grid-column:1/-1}
+  .masthead{display:grid;grid-template-columns:minmax(0,1fr) auto;min-height:0;padding:16px 0}
+  .edition{grid-row:2;grid-column:1/-1;text-align:left}
   .masthead .how{display:none}
   .hero{grid-template-columns:minmax(0,1fr);min-height:0;padding-top:26px}
   .headline{margin-top:20px;font-size:clamp(34px,8.6vw,56px)}
@@ -231,7 +236,7 @@ footer{margin-top:40px;padding-top:15px;border-top:1px solid var(--x-line);color
   .reading-copy .reading-title{font-size:20px}
   .reading-copy p{font-size:13px}
   /* A 360x740 screen still shows the offer's first action. */
-  .offer h2{margin:12px 0}
+  .offer h2{margin:0 0 12px}
   .price{margin-top:18px}
   .price strong{font-size:52px}
   #no-adena .pay-button{margin-top:14px}
@@ -267,7 +272,7 @@ footer{margin-top:40px;padding-top:15px;border-top:1px solid var(--x-line);color
 <div class="sky" id="sky">
   <header class="masthead">
     <p class="brand"><span aria-hidden="true"></span>x402 / Gno</p>
-    <p class="edition mono">testnet demo · sample weather data</p>
+    <p class="edition mono"><span class="nowrap">testnet demo ·</span> <span class="nowrap">unaudited ·</span> <span class="nowrap">pre-release ·</span> <span class="nowrap">sample weather data</span></p>
     <nav aria-label="Page">
       <a class="mono how" href="#how">How it works ↓</a>
       <a class="mono" href="https://github.com/gnoverse/x402">Source on GitHub ↗</a>
@@ -310,11 +315,10 @@ footer{margin-top:40px;padding-top:15px;border-top:1px solid var(--x-line);color
       </div>
 
       <section class="offer" aria-labelledby="offer-title">
-        <p class="mono">THE TERMS / SCHEME EXACT</p>
         <h2 id="offer-title"><span class="unpaid">Get the weather.<br>One reading, one payment.</span><span class="settled">Settled, then served.</span></h2>
         <p class="price"><strong>{{.Amount}}</strong><span>{{.Unit}} / request</span></p>
-        <p class="fine mono">{{.Coin}}</p>
-        <p class="net">Test GNOT on <code>{{.Network}}</code>, from <a href="https://faucet.gno.land">faucet.gno.land</a>. The network fee is on top.</p>
+        <p class="coin"><code>{{.Coin}}</code>{{if eq .Unit "GNOT"}}: a ugnot is a millionth of a GNOT.{{end}}</p>
+        <p class="net">Test GNOT on <code>{{.Network}}</code>{{with .Faucet}}, from <a href="https://{{.}}">{{.}}</a>{{end}}. The network fee is on top.</p>
         <div id="pay-adena" hidden>
           <button class="pay-button" id="pay" type="button"><span>Pay {{.Amount}} {{.Unit}} with Adena</span></button>
           <p id="pay-status" role="status" data-tx="{{.TxURL}}" tabindex="-1"></p>
@@ -323,8 +327,12 @@ footer{margin-top:40px;padding-top:15px;border-top:1px solid var(--x-line);color
           <p class="phone-note">Paying takes a computer: Adena is a desktop browser extension, and paying from code needs a terminal. <a href="#how">See how it works</a>.</p>
           <a class="pay-button" href="#code"><span>Pay it from code</span><span aria-hidden="true">↓</span></a>
           <button class="alt-pay" id="send-link" type="button"><span>Send this page to a computer</span></button>
-          <a class="alt-pay" href="https://adena.app" target="_blank" rel="noopener"><span>Or pay with Adena, gno's wallet</span><span aria-hidden="true">↗</span></a>
-          <p>Install it, then reload this page.</p>
+          <a class="alt-pay" href="https://adena.app" target="_blank" rel="noopener"><span>Or pay with Adena, a gno wallet</span><span aria-hidden="true">↗</span></a>
+          <ol class="setup">
+            <li>Install Adena in this browser.</li>
+            <li>Create an account, and fund it{{with .Faucet}} at <a href="https://{{.}}">{{.}}</a>{{end}}.</li>
+            <li>Reload this page, so Adena can reach it.</li>
+          </ol>
         </div>
         <a class="alt-pay" href="#code"><span>Or pay it from code</span><span aria-hidden="true">↓</span></a>
         <p class="role">Adena only signs the payment. The seller's facilitator, which holds no key, checks it and broadcasts it.</p>
@@ -368,11 +376,12 @@ curl -si <span data-url>&lt;this page's URL&gt;</span></code></pre>
         <li><div><b>Read the script.</b> <a href="https://github.com/gnoverse/x402/blob/main/examples/weather/buy.mjs">examples/weather/buy.mjs</a> is the whole buyer the commands below run.</div></li>
         <li><div><b>Make a throwaway key.</b> This prints a new mnemonic, its address and the command that pays this page with it, and saves none of them.
           <pre data-copy><code>npx github:gnoverse/x402#client/v0.5.0 <span class="nowrap">--new-key</span> <span data-url>&lt;this page's URL&gt;</span></code></pre></div></li>
-        <li><div><b>Fund its address</b> at <a href="https://faucet.gno.land">faucet.gno.land</a> with test GNOT on <code class="nowrap">{{.Network}}</code>: {{.Amount}} {{.Unit}} for the weather, and the network fee on top.</div></li>
+        <li><div><b>Fund its address</b>{{with .Faucet}} at <a href="https://{{.}}">{{.}}</a>{{end}} with test GNOT on <code class="nowrap">{{.Network}}</code>: {{.Amount}} {{.Unit}} for the weather, and the network fee on top.</div></li>
         <li><div><b>Pay</b> with the command step 2 printed. It looks like this, and prints the transaction and the weather.
           <pre><code>X402_MNEMONIC='&lt;mnemonic&gt;' npx github:gnoverse/x402#client/v0.5.0 <span data-url>&lt;this page's URL&gt;</span></code></pre></div></li>
       </ol>
       <p>Both commands need git and Node 22.18+ or 24.11+. Running the buyer from a clone, or against another node, is in the <a href="https://github.com/gnoverse/x402/tree/main/examples/weather#paying-it">weather example's README</a>.</p>
+      <p class="warn">Testnet only. The mechanism is unaudited and pre-release; do not point it at real funds.</p>
       <p>A stock x402 client pays in gno after two lines: register the scheme, and admit <code>ugnot</code> (a millionth of a GNOT) to its spend controls, capped per request.</p>
       <pre class="snippet" data-copy><code tabindex="0">import { ExactGnoScheme } from "@gnoverse/x402-gno/exact/client";
 
@@ -383,6 +392,7 @@ const client = new x402Client()
   });</code></pre>
 
       <h2 id="sell">Sell an endpoint in gno</h2>
+      <p class="warn">Testnet only. The mechanism is unaudited and pre-release; do not point it at real funds.</p>
       <p>A seller lists gno among the ways a route accepts payment, and the ecosystem's x402 middleware does the rest: it prices the route, answers 402 and reads the payment. Only the scheme is gno's. In Go:</p>
       <pre class="snippet" data-copy><code tabindex="0">routes := x402http.RoutesConfig{
     "GET /weather": {
@@ -404,7 +414,6 @@ handler := nethttpmw.X402Payment(nethttpmw.Config{
 
       <h2>Read more</h2>
       <p>The seller, the buyer and a facilitator you can run yourself are in <a href="https://github.com/gnoverse/x402/tree/main/examples/weather">examples/weather</a>. The mechanism and its payment model are in the <a href="https://github.com/gnoverse/x402#readme">gnoverse/x402 README</a>.</p>
-      <p class="warn">Testnet only. The mechanism is unaudited and pre-release; do not point it at real funds.</p>
 
       <footer>
         <p>x402 v2, scheme <code>exact</code>, network <code>{{.Network}}</code>.</p>

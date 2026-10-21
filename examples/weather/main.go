@@ -189,8 +189,8 @@ func newSeller(ctx context.Context, cfg sellerConfig) (http.Handler, error) {
 	chainID := strings.TrimPrefix(cfg.network, "gno:")
 	var page strings.Builder
 	err := paywall.Execute(&page, struct {
-		Amount, Unit, Coin, Network, ChainID, PayTo, TxURL string
-		Script                                             template.JS
+		Amount, Unit, Coin, Network, ChainID, PayTo, TxURL, Faucet string
+		Script                                                     template.JS
 	}{
 		Amount:  amount,
 		Unit:    unit,
@@ -199,6 +199,7 @@ func newSeller(ctx context.Context, cfg sellerConfig) (http.Handler, error) {
 		ChainID: chainID,
 		PayTo:   cfg.payTo,
 		TxURL:   explorerTxURL(chainID),
+		Faucet:  faucetHost(chainID),
 		Script:  template.JS(paywallScript),
 	})
 	if err != nil {
@@ -334,6 +335,16 @@ func explorerTxURL(chainID string) string {
 	switch chainID {
 	case "onyx-1":
 		return "https://gnoscan.io/transactions/details?chainId=onyx-1&txhash="
+	}
+	return ""
+}
+
+// faucetHost returns the host of the faucet that hands out chainID's test GNOT,
+// or "" for a chain no public faucet serves.
+func faucetHost(chainID string) string {
+	switch chainID {
+	case "onyx-1":
+		return "faucet.gno.land"
 	}
 	return ""
 }

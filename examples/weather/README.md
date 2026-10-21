@@ -139,13 +139,14 @@ the facilitator holds no key. The mechanism sets it, so no seller writes it. The
 `paymentFlow` key because the flow is `authorization`, the specification's default, which may be
 omitted.
 
-A browser gets a page instead (`paywall.html`): a masthead naming it a testnet demo with sample
-weather data and linking this repository, then the 402, the four steps of the exchange (402, sign,
-retry, 200), a dial waiting for the reading, and the terms beside it: the price in GNOT, the network
-and the faucet, the payee, and how to pay. On a phone the dial shows only once paid, and the steps
+A browser gets a page instead (`paywall.html`): a masthead naming it an unaudited, pre-release
+testnet demo with sample weather data and linking this repository, then the 402, the four steps of
+the exchange (402, sign, retry, 200), a dial waiting for the reading, and the terms beside it: the
+price in GNOT, then in ugnot with what a ugnot is, the network and, on `onyx-1`, its faucet, the
+payee, and how to pay. On a phone the dial shows only once paid, and the steps
 only once a payment starts. A touch screen pays on neither path, so there the offer says paying
 takes a computer, links how it works, and sends the page on to one through the share sheet or the
-clipboard; the faucet line and Adena's install link wait for that computer. The middleware's own
+clipboard; the faucet line, Adena's install link and the steps to it wait for that computer. The middleware's own
 paywall supports EVM and Solana chains only. In a browser with the [Adena](https://adena.app)
 wallet, a visitor pays from the page. A line beside the
 offer says what Adena does there: it only signs, and the seller's facilitator, which holds no key,
@@ -160,11 +161,13 @@ came back, withdraws the button and the link to pay from code too, and keeps the
 retry; a pending one links its transaction. A refusal says what to do before the reason's code and
 gives the button back. A body that is not one of the four forecasts the page draws (sunny, cloudy, rain, snow) shows
 only as served. Without Adena, the offer leads with paying from code, a link down to its steps, and
-offers Adena second, with a link to adena.app and a note to reload once it is installed; without
+offers Adena second, with a link to adena.app and three steps: install it, create and fund an
+account, then reload the page, since in Chrome Adena reaches only pages loaded after its install; without
 JavaScript, only the link to paying from code shows. The steps sit behind a warning to read the
 buyer first: make a throwaway key with it for the page's URL, fund the key, then run the pay command
 the key step printed. Below them, the page shows how a seller lists gno on a route in Go, and where
-a facilitator runs.
+a facilitator runs. A warning that the mechanism is unaudited and pre-release comes right before the
+stock client's snippet and before the seller's.
 `/` redirects to `/weather`, and `/favicon.ico` serves the page's icon, unpriced.
 
 ## Paying it
