@@ -266,6 +266,10 @@ function readingOf(body) {
 const ADENA_WAIT_MS = 5000;
 const ADENA_POLL_MS = 250;
 
+// The tab leads with the payment's state, as the badge does.
+const TITLE_UNPAID = "Payment required";
+const TITLE_SETTLED = "Payment settled";
+
 /** Wires the page: this page's URL, copy buttons, the live terms, and Adena. */
 export function start(document, window) {
   // A fragment comes from a link inside this page, not from the seller.
@@ -395,6 +399,7 @@ export function start(document, window) {
       showStatus(document, status, statusLine(paid), paid.transaction);
       if (paid.paid) {
         sky.dataset.step = "200";
+        document.title = document.title.replace(TITLE_UNPAID, TITLE_SETTLED);
         withdraw("paid");
         result.querySelector("code").textContent = paid.body;
         result.hidden = false;

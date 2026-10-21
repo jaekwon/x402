@@ -224,6 +224,34 @@ func TestThePageOpensOnADemoMastheadLinkingTheSource(t *testing.T) {
 	assert.NotContains(t, head+masthead, "live", "live next to weather reads as real data")
 }
 
+// The script renames the tab once paid by replacing the state the title opens
+// with, so a title that opened otherwise would keep saying payment is due.
+func TestThePageTitleOpensWithTheStateTheScriptRenames(t *testing.T) {
+	gnofacilitator := httptest.NewServer(facilitator.New(unreachableChain{}, exacttest.ChainID).Handler())
+	t.Cleanup(gnofacilitator.Close)
+	sellerURL, _ := weatherSeller(t, gnofacilitator.URL)
+
+	_, page := browserPage(t, sellerURL)
+
+	unpaid := regexp.MustCompile(`const TITLE_UNPAID = "([^"]+)"`).FindStringSubmatch(paywallScript)
+	require.NotNil(t, unpaid, "paywall.js no longer names the title's unpaid state")
+	head, _ := headAndMasthead(t, page)
+	assert.Contains(t, head, "<title>"+unpaid[1]+" · ")
+}
+
+// A search result shows the page's description, which says what the demo is
+// and how far to trust it.
+func TestThePageDescribesTheDemoAsUnaudited(t *testing.T) {
+	gnofacilitator := httptest.NewServer(facilitator.New(unreachableChain{}, exacttest.ChainID).Handler())
+	t.Cleanup(gnofacilitator.Close)
+	sellerURL, _ := weatherSeller(t, gnofacilitator.URL)
+
+	_, page := browserPage(t, sellerURL)
+
+	head, _ := headAndMasthead(t, page)
+	assert.Regexp(t, `<meta name="description" content="[^"]*sample weather[^"]*unaudited[^"]*">`, head)
+}
+
 // The mechanism has had no audit, which a visitor who reads only the first
 // strip of the page must learn too.
 func TestTheMastheadSaysTheMechanismIsUnaudited(t *testing.T) {

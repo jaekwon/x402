@@ -152,7 +152,8 @@ wallet, a visitor pays from the page. A line beside the
 offer says what Adena does there: it only signs, and the seller's facilitator, which holds no key,
 checks the payment and broadcasts it. `paywall.js` works as a stock x402 client does: it reads the
 terms, has Adena sign the bank send without broadcasting it, and repeats the request with the
-payment, lighting each step as it goes. Once the payment settles, the badge reads 200, the dial
+payment, lighting each step as it goes. Once the payment settles, the badge reads 200, the tab's
+title says the payment settled, the dial
 shows the temperature and the forecast, marked as sample data, and the page takes on the forecast's
 weather; the response body and the transaction show below, the transaction linked to gnoscan.io on
 `onyx-1`. The offer then becomes the receipt and offers no second payment: it points on to selling

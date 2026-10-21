@@ -3,11 +3,14 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="color-scheme" content="light dark">
+<meta name="description" content="A testnet demo of x402 on Gno: pay {{.Amount}} {{.Unit}} for one sample weather reading, from the Adena wallet or from code. The mechanism is unaudited and pre-release.">
 <title>Payment required · x402 on Gno testnet demo</title>
 <style>
 :root{
   --x-paper:#eceee8;--x-ink:#183c34;--x-muted:#4a6057;--x-line:#aab9aa;--x-panel:#e2e6db;
   --x-accent:#d9ed84;--x-due:#eebe3f;--x-on-face:#183c34;
+  /* The lime is nearly the paper's lightness, so a lime chip needs an edge to stand on it. */
+  --x-accent-edge:color-mix(in srgb,var(--x-on-face) 30%,var(--x-accent));
   --x-sunny-face:#e9efaa;--x-sunny-ring:#8d872c;--x-sunny-glyph:#6b661e;--x-sunny-glow:rgba(238,190,63,.24);--x-sunny-halo:rgba(218,183,56,.22);
   --x-cloudy-face:#d7ddd6;--x-cloudy-ring:#6b7b74;--x-cloudy-glyph:#4a5a54;--x-cloudy-bank:rgba(108,126,118,.16);
   --x-rain-face:#c2dae0;--x-rain-ring:#5d8897;--x-rain-glyph:#365e70;--x-rain-tint:rgba(83,129,147,.17);--x-rain-line:rgba(84,123,138,.4);
@@ -18,12 +21,13 @@
   --x-gutter:48px;--x-masthead:73px;
   /* --x-grow scales the hero on a window taller than 900px, by no more than the width past 1382px lets
      the headline's 5.5vw ceiling grow (.07/.055 per px). --x-hero-content is the closed hero's height
-     from 1382px wide; re-measure its 715px and .591 if the hero changes. */
+     from 1382px wide; re-measure its 718px and .591 if the hero changes. */
   --x-grow:clamp(0px,min(var(--x-screen,100vh) - 900px,(100vw - 1382px)/1.273),540px);
-  --x-dial:calc(270px + var(--x-grow)*.4);--x-hero-content:calc(715px + var(--x-grow)*.591);
+  --x-dial:calc(270px + var(--x-grow)*.4);--x-hero-content:calc(718px + var(--x-grow)*.591);
 }
 @media (prefers-color-scheme:dark){:root{
   --x-paper:#132b26;--x-ink:#e4eddf;--x-muted:#b2c4b9;--x-line:#4c6c5e;--x-panel:#203c32;
+  --x-sunny-glow:rgba(238,190,63,.1);
 }}
 *{box-sizing:border-box}
 [hidden]{display:none!important}
@@ -39,8 +43,8 @@ code{font-size:.85em}
 pre{position:relative;margin:16px 0 0;padding:20px;background:var(--x-panel);font-size:12px;line-height:1.7;white-space:pre-wrap;overflow-wrap:anywhere}
 pre[data-copy]{padding-right:76px}
 pre code{font-size:inherit}
-.mono{font:11px/1.5 var(--x-mono);letter-spacing:.06em}
-.copy{position:absolute;top:8px;right:8px;padding:4px 8px;border:1px solid var(--x-line);background:var(--x-paper);color:var(--x-ink);font:11px/1.4 var(--x-mono)}
+.mono{font:12px/1.5 var(--x-mono);letter-spacing:.06em}
+.copy{position:absolute;top:8px;right:8px;padding:4px 8px;border:1px solid var(--x-line);background:var(--x-paper);color:var(--x-ink);font:12px/1.4 var(--x-mono)}
 .copy:hover{border-color:var(--x-ink)}
 
 /* ---- Frame and weather backdrop */
@@ -83,7 +87,7 @@ pre code{font-size:inherit}
 /* paywall.js reveals #pay-result only for a settled payment. */
 .sky:has(#pay-result:not([hidden])) .settled{display:inline}
 .sky:has(#pay-result:not([hidden])) .unpaid{display:none}
-.sky:has(#pay-result:not([hidden])) .badge{background:var(--x-accent);color:var(--x-on-face)}
+.sky:has(#pay-result:not([hidden])) .badge{background:var(--x-accent);color:var(--x-on-face);box-shadow:inset 0 0 0 1px var(--x-accent-edge)}
 .headline{margin-top:26px;font-family:var(--x-display);font-size:clamp(44px,5.5vw,calc(76px + var(--x-grow)*.07));letter-spacing:-.055em;line-height:1.04}
 .intro{max-width:calc(480px + var(--x-grow)*.25);margin-top:22px;color:var(--x-muted);font-size:calc(16px + var(--x-grow)*.007)}
 /* The exchange a payment walks through. paywall.js names the step it is on in
@@ -97,7 +101,7 @@ pre code{font-size:inherit}
 .sky[data-step="200"] .track li{border-top-color:var(--x-ink);color:var(--x-ink)}
 .sky:is(:not([data-step]),[data-step="402"]) .track [data-step="402"] code{border-color:var(--x-due);background:var(--x-due);color:var(--x-on-face)}
 .sky[data-step=sign] .track [data-step=sign] code,.sky[data-step=retry] .track [data-step=retry] code{border-color:var(--x-ink);background:var(--x-ink);color:var(--x-paper)}
-.sky[data-step="200"] .track [data-step="200"] code{border-color:var(--x-accent);background:var(--x-accent);color:var(--x-on-face)}
+.sky[data-step="200"] .track [data-step="200"] code{border-color:var(--x-accent-edge);background:var(--x-accent);color:var(--x-on-face)}
 .sky:not([data-forecast]) .reading,.sky[data-forecast] .awaiting{display:none}
 .instrument{display:flex;align-items:center;gap:30px;margin-top:28px}
 .gauge{position:relative;flex-shrink:0;width:var(--x-dial)}
@@ -114,7 +118,7 @@ pre code{font-size:inherit}
 .glyph{display:block;width:calc(var(--x-dial)*.12);height:calc(var(--x-dial)*.12);color:var(--x-glyph);fill:currentColor}
 .sky:not([data-forecast]) .glyph{display:none}
 .temp{font-size:calc(var(--x-dial)*.3);font-weight:300;letter-spacing:-.08em;line-height:1}
-.dial-caption{margin-top:14px;font-size:11px;letter-spacing:.15em;text-align:center;text-transform:uppercase}
+.dial-caption{margin-top:14px;font-size:12px;letter-spacing:.15em;text-align:center;text-transform:uppercase}
 .sky[data-forecast] .dial{background:repeating-conic-gradient(var(--x-ink) 0deg 1deg,transparent 1deg 10deg)}
 .sky[data-forecast] .dial::before{border-color:var(--x-ring);background:var(--x-face)}
 .sky[data-forecast] .dial::after{border-color:var(--x-ring)}
@@ -182,7 +186,10 @@ pre code{font-size:inherit}
 .offer dl{margin:22px 0 0}
 .offer dl div{display:grid;grid-template-columns:calc(80px + var(--x-grow)*.04) minmax(0,1fr);gap:8px;padding:10px 0;border-top:1px solid var(--x-line);font-size:calc(13px + var(--x-grow)*.005)}
 .offer dt{color:var(--x-muted)}
-.offer dd{margin:0;overflow-wrap:anywhere}
+.offer dd{margin:0;overflow-wrap:anywhere;text-wrap:balance}
+/* An address may break anywhere, so its lines can come out even instead of leaving a few
+   characters alone. */
+.offer dd code{word-break:break-all}
 .offer dd .fine{display:block;margin:0}
 details{margin-top:20px}
 summary{width:fit-content;font-size:calc(13px + var(--x-grow)*.005);cursor:pointer}
@@ -227,7 +234,7 @@ footer{margin-top:40px;padding-top:15px;border-top:1px solid var(--x-line);color
   .intro{margin-top:16px}
   .track{grid-template-columns:repeat(2,minmax(0,1fr));row-gap:14px}
   .instrument{flex-direction:row;align-items:flex-start;gap:18px;margin-top:24px}
-  .dial-caption{margin-top:10px;font-size:10px;letter-spacing:.1em}
+  .dial-caption{margin-top:10px;font-size:11px;letter-spacing:.1em}
   /* On a phone the empty dial stays hidden until a forecast is drawn, and the track until a
      payment starts, so the price comes first. */
   .sky:not([data-forecast]) .instrument,.sky:not([data-step]) .track{display:none}

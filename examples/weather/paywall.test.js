@@ -455,6 +455,7 @@ function fakePage() {
   const urls = [element(), element()];
   const made = [];
   const document = {
+    title: "Payment required · x402 on Gno testnet demo",
     getElementById: (id) => elements[id],
     querySelectorAll: (selector) => ({ "pre[data-copy]": [copyable], "[data-url]": urls })[selector] ?? [],
     createElement: () => {
@@ -574,6 +575,13 @@ describe("start, paying", () => {
     const { elements } = await paidPage(WEATHER);
 
     expect(elements["pay-status"].focused).toBe(true);
+  });
+
+  // A tab left open after paying would otherwise still say payment is required.
+  it("names the settled payment in the tab once paid", async () => {
+    const { document } = await paidPage(WEATHER);
+
+    expect(document.title).toBe("Payment settled · x402 on Gno testnet demo");
   });
 
   it("says why a click paid nothing, and frees the button", async () => {
