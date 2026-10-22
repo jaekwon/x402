@@ -1169,6 +1169,18 @@ describe("start, a payment made from code", () => {
     expect(elements["pay-status"].focused).toBe(false);
   });
 
+  // A refusal hands focus back to the Pay button; hiding it there would drop
+  // a keyboard user's place to the top of the page.
+  it("moves focus to the receipt when a payment from code hides the button holding it", async () => {
+    const { document, elements, copy } = watchingPage(visited);
+    document.activeElement = elements.pay;
+
+    await copy();
+
+    await vi.waitFor(() => expect(elements["pay-result"].hidden).toBe(false));
+    expect(elements["pay-status"].focused).toBe(true);
+  });
+
   // Copying the payee's address or a snippet is no sign of a payment coming.
   it("watches on a copy that carries the visit, and on no other", async () => {
     const { document, window, payUrls, lookups } = watchingPage();

@@ -500,6 +500,10 @@ export function start(document, window) {
   const settle = (outcome) => {
     status.dataset.outcome = outcome;
     document.title = document.title.replace(TITLE_UNPAID, outcome === "paid" ? TITLE_SETTLED : TITLE_SENT);
+    // Hiding the button that holds focus would drop it to the top of the page.
+    if (document.activeElement === button) {
+      status.focus();
+    }
     button.hidden = true;
   };
   // After a click, focus moves to the status line, since the button that held
