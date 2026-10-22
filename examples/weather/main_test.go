@@ -436,8 +436,9 @@ func TestThePageCarriesNoExplorerForALocalChain(t *testing.T) {
 	assert.Contains(t, page, `id="pay-status" role="status" data-tx=""`)
 }
 
-// The key step hands the buyer this page's URL, which the page's script fills
-// in, so the pay command it prints needs nothing more.
+// The key step hands the buyer the URL that pays this page, which the page's
+// script fills in with the tab's visit, so the pay command it prints needs
+// nothing more.
 func TestThePageMakesAKeyForPayingThisPage(t *testing.T) {
 	gnofacilitator := httptest.NewServer(facilitator.New(unreachableChain{}, exacttest.ChainID).Handler())
 	t.Cleanup(gnofacilitator.Close)
@@ -445,11 +446,11 @@ func TestThePageMakesAKeyForPayingThisPage(t *testing.T) {
 
 	_, page := browserPage(t, sellerURL)
 
-	assert.Contains(t, page, `--new-key</span> <span data-url>`)
+	assert.Contains(t, page, `--new-key</span> <span data-pay-url>`)
 }
 
 // The pay step shows the command the key step prints: the mnemonic, the
-// pinned buyer and this page's URL.
+// pinned buyer and the URL that pays this page.
 func TestThePageShowsThePayCommandTheKeyStepPrints(t *testing.T) {
 	gnofacilitator := httptest.NewServer(facilitator.New(unreachableChain{}, exacttest.ChainID).Handler())
 	t.Cleanup(gnofacilitator.Close)
@@ -457,7 +458,27 @@ func TestThePageShowsThePayCommandTheKeyStepPrints(t *testing.T) {
 
 	_, page := browserPage(t, sellerURL)
 
-	assert.Regexp(t, `<code>X402_MNEMONIC='&lt;mnemonic&gt;' npx github:gnoverse/x402#client/v\d+\.\d+\.\d+ <span data-url>`, page)
+	assert.Regexp(t, `<code>X402_MNEMONIC='&lt;mnemonic&gt;' npx github:gnoverse/x402#client/v\d+\.\d+\.\d+ <span data-pay-url>`, page)
+}
+
+// A payment made from code shows on the page with or without Adena, so the
+// status line that reports it sits outside the blocks the script shows and
+// hides by wallet.
+func TestTheStatusLineShowsWithOrWithoutAdena(t *testing.T) {
+	gnofacilitator := httptest.NewServer(facilitator.New(unreachableChain{}, exacttest.ChainID).Handler())
+	t.Cleanup(gnofacilitator.Close)
+	sellerURL, _ := weatherSeller(t, gnofacilitator.URL)
+
+	_, page := browserPage(t, sellerURL)
+
+	require.Contains(t, page, `id="pay-status"`)
+	for _, block := range []string{`<div id="pay-adena"`, `<div id="no-adena"`} {
+		_, inside, found := strings.Cut(page, block)
+		require.True(t, found, "%s is gone", block)
+		inside, _, found = strings.Cut(inside, "</div>")
+		require.True(t, found, "%s never closes", block)
+		assert.NotContains(t, inside, `id="pay-status"`, "inside %s", block)
+	}
 }
 
 // The commands run the buyer from a release tag, so the script a visitor read

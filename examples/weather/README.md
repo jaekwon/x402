@@ -174,7 +174,11 @@ offers Adena second, with a link to adena.app and three steps: install it, creat
 account, then reload the page, since in Chrome Adena reaches only pages loaded after its install; without
 JavaScript, only the link to paying from code shows. The steps sit behind a warning to read the
 buyer first: make a throwaway key with it for the page's URL, fund the key, then run the pay command
-the key step printed. Below them, the page shows how a seller lists gno on a route in Go, and where
+the key step printed. The URL in those commands carries the tab's visit token, kept in the tab's
+`sessionStorage`. Once a command carrying it is copied, the page asks `/weather/visits/<token>` every
+3 seconds while in view, for 10 minutes after the copy or a return to the tab, and a reload asks on.
+A payment it finds shows as one made with Adena does, the status line naming it paid from code by
+the payer's address, shortened. Below them, the page shows how a seller lists gno on a route in Go, and where
 a facilitator runs. A warning that the mechanism is unaudited and pre-release comes right before the
 stock client's snippet and before the seller's.
 `/` redirects to `/weather`, and `/favicon.ico` serves the page's icon, unpriced. A paid request

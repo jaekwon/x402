@@ -178,7 +178,7 @@ pre code{font-size:inherit}
 #paid-reading{color:var(--x-ink);font-weight:500}
 .next{display:none}
 .sky:has(#pay-result:not([hidden])) .next{display:block}
-.sky:has(#pay-result:not([hidden])) :is(.offer > .alt-pay,.net,.role){display:none}
+.sky:has(#pay-result:not([hidden])) :is(.offer > .alt-pay,.net,.role,#no-adena){display:none}
 .sky:has(#pay-result:not([hidden])) .price strong{font-size:calc(36px + var(--x-grow)*.02)}
 .sky:has(#pay-result:not([hidden])) #pay-status{font-size:calc(16px + var(--x-grow)*.006)}
 .pay-button:disabled{cursor:wait;opacity:.75}
@@ -354,7 +354,6 @@ footer{margin-top:40px;padding-top:15px;border-top:1px solid var(--x-line);color
         <p class="net">Test GNOT on <code>{{.Network}}</code>{{with .Faucet}}, from <a href="https://{{.}}">{{.}}</a>{{end}}. The network fee is on top.</p>
         <div id="pay-adena" hidden>
           <button class="pay-button" id="pay" type="button"><span>Pay {{.Amount}} {{.Unit}} with Adena</span></button>
-          <p id="pay-status" role="status" data-tx="{{.TxURL}}" tabindex="-1"></p>
         </div>
         <div id="no-adena">
           <p class="phone-note">Paying takes a computer: Adena is a desktop browser extension, and paying from code needs a terminal. <a href="#how">See how it works</a>.</p>
@@ -368,6 +367,7 @@ footer{margin-top:40px;padding-top:15px;border-top:1px solid var(--x-line);color
             <li>Reload this page, so Adena can reach it.</li>
           </ol>
         </div>
+        <p id="pay-status" role="status" data-tx="{{.TxURL}}" tabindex="-1"></p>
         <a class="alt-pay" href="#code"><span>Or pay it from code</span><span aria-hidden="true">↓</span></a>
         <p class="role">Adena only signs the payment. The seller's facilitator, which holds no key, checks it and broadcasts it.</p>
         <nav class="next" aria-label="Next step">
@@ -409,10 +409,10 @@ curl -si <span data-url>&lt;this page's URL&gt;</span></code></pre>
       <ol class="steps">
         <li><div><p><b>Read the script.</b> <a href="https://github.com/gnoverse/x402/blob/main/examples/weather/buy.mjs">examples/weather/buy.mjs</a> is the whole buyer the commands below run.</p></div></li>
         <li><div><p><b>Make a throwaway key.</b> This prints a new mnemonic, its address and the command that pays this page with it, and saves none of them.</p>
-          <pre data-copy><code>npx github:gnoverse/x402#client/v0.5.0 <span class="nowrap">--new-key</span> <span data-url>&lt;this page's URL&gt;</span></code></pre></div></li>
+          <pre data-copy><code>npx github:gnoverse/x402#client/v0.5.0 <span class="nowrap">--new-key</span> <span data-pay-url>&lt;this page's URL&gt;</span></code></pre></div></li>
         <li><div><p><b>Fund its address</b>{{with .Faucet}} at <a href="https://{{.}}">{{.}}</a>{{end}} with test GNOT on <code class="nowrap">{{.Network}}</code>: {{.Amount}} {{.Unit}} for the weather, and the network fee on top.</p></div></li>
         <li><div><p><b>Pay</b> with the command step 2 printed. It looks like this, and prints the transaction and the weather.</p>
-          <pre><code>X402_MNEMONIC='&lt;mnemonic&gt;' npx github:gnoverse/x402#client/v0.5.0 <span data-url>&lt;this page's URL&gt;</span></code></pre></div></li>
+          <pre><code>X402_MNEMONIC='&lt;mnemonic&gt;' npx github:gnoverse/x402#client/v0.5.0 <span data-pay-url>&lt;this page's URL&gt;</span></code></pre></div></li>
       </ol>
       <p>Both commands need git and Node 22.18+ or 24.11+. Running the buyer from a clone, or against another node, is in the <a href="https://github.com/gnoverse/x402/tree/main/examples/weather#paying-it">weather example's README</a>.</p>
       <p class="warn">Testnet only. The mechanism is unaudited and pre-release; do not point it at real funds.</p>

@@ -223,6 +223,9 @@ const UNSETTLED = ["settlement_pending", "duplicate_settlement"];
  * unpaid with its transaction, and may still go through.
  */
 export function statusLine(result) {
+  if (result.paid && result.from === "code") {
+    return `Paid from code by ${shortAddress(result.payer)} on ${result.network}. Transaction ${result.transaction}.`;
+  }
   if (result.paid) {
     return `Paid on ${result.network}. Transaction ${result.transaction}.`;
   }
@@ -244,6 +247,10 @@ export function statusLine(result) {
     return `Not paid, and nothing was spent: the seller refused this payment (${result.reason}).`;
   }
   return `Not paid (${result.status}).`;
+}
+
+function shortAddress(address) {
+  return address.length > 12 ? `${address.slice(0, 6)}…${address.slice(-4)}` : address;
 }
 
 // showStatus writes line into the status line, its transaction linked to the
@@ -303,6 +310,65 @@ const TITLE_UNPAID = "Payment required";
 const TITLE_SETTLED = "Payment settled";
 const TITLE_SENT = "Payment sent";
 
+// The tab's visit, which the commands that pay this page carry so the seller
+// can tell the page of a payment made from a terminal. sessionStorage keeps it
+// across a reload; where the browser refuses storage it lasts as long as the
+// page.
+const VISIT_KEY = "x402-weather-visit";
+// Set once a command carrying the visit is copied, so a reload watches on.
+const WATCHING_KEY = "x402-weather-watching";
+const VISIT_TOKEN = /^[0-9a-f]{32}$/;
+
+// How often the page asks the seller about its visit while in view, and for
+// how long after a copy or a return to the tab: funding a fresh key takes
+// minutes.
+const VISIT_POLL_MS = 3000;
+const VISIT_WATCH_MS = 10 * 60_000;
+
+function stored(window, key) {
+  try {
+    return window.sessionStorage.getItem(key);
+  } catch {
+    return null;
+  }
+}
+
+function store(window, key, value) {
+  try {
+    window.sessionStorage.setItem(key, value);
+  } catch {
+    // Refused: the page works on, and forgets on reload.
+  }
+}
+
+// visitToken returns this tab's visit, made from 128 random bits the first
+// time.
+function visitToken(window) {
+  const kept = stored(window, VISIT_KEY);
+  if (kept !== null && VISIT_TOKEN.test(kept)) {
+    return kept;
+  }
+  const bytes = window.crypto.getRandomValues(new Uint8Array(16));
+  const token = Array.from(bytes, (b) => b.toString(16).padStart(2, "0")).join("");
+  store(window, VISIT_KEY, token);
+  return token;
+}
+
+// lookUpVisit returns the payment the seller kept under the visit url names,
+// or null while there is none or the seller cannot say.
+async function lookUpVisit(window, url) {
+  try {
+    const response = await window.fetch(url, { cache: "no-store", headers: { Accept: "application/json" } });
+    if (response.status !== 200) {
+      return null;
+    }
+    const found = await response.json();
+    return ["transaction", "network", "payer", "body"].every((key) => typeof found?.[key] === "string") ? found : null;
+  } catch {
+    return null;
+  }
+}
+
 /**
  * Writes url as one shell word: bare when a shell reads none of its
  * characters, single-quoted otherwise.
@@ -319,6 +385,12 @@ export function start(document, window) {
   for (const e of document.querySelectorAll("[data-url]")) {
     e.textContent = shellWord(here);
   }
+  const visit = visitToken(window);
+  const paying = new URL(here);
+  paying.searchParams.set("visit", visit);
+  for (const e of document.querySelectorAll("[data-pay-url]")) {
+    e.textContent = shellWord(paying.href);
+  }
 
   if (window.navigator.clipboard !== undefined) {
     for (const pre of document.querySelectorAll("pre[data-copy]")) {
@@ -327,17 +399,26 @@ export function start(document, window) {
       button.className = "copy";
       button.textContent = "Copy";
       button.addEventListener("click", async () => {
+        const text = pre.querySelector("code").innerText;
         try {
-          await window.navigator.clipboard.writeText(pre.querySelector("code").innerText);
+          await window.navigator.clipboard.writeText(text);
           button.textContent = "Copied";
         } catch {
           button.textContent = "Copy failed";
         }
         window.setTimeout(() => (button.textContent = "Copy"), 1500);
+        if (text.includes(visit)) {
+          watch();
+        }
       });
       pre.append(button);
     }
   }
+  document.addEventListener("copy", () => {
+    if (String(window.getSelection()).includes(visit)) {
+      watch();
+    }
+  });
 
   // A phone pays on neither path, Adena being a desktop extension and the buyer
   // a terminal command, so the page hands its own link to the share sheet, or to
@@ -412,13 +493,31 @@ export function start(document, window) {
   // unpaid request.
   const sky = document.getElementById("sky");
   // A payment that settled, or may still, withdraws the button, so a second
-  // click cannot sign a second payment for the same reading. Focus then moves to
-  // the status line, since the button that held it is gone.
-  const withdraw = (outcome) => {
+  // click cannot sign a second payment for the same reading.
+  const settle = (outcome) => {
     status.dataset.outcome = outcome;
     document.title = document.title.replace(TITLE_UNPAID, outcome === "paid" ? TITLE_SETTLED : TITLE_SENT);
     button.hidden = true;
+  };
+  // After a click, focus moves to the status line, since the button that held
+  // it is gone.
+  const withdraw = (outcome) => {
+    settle(outcome);
     status.focus();
+  };
+  // serve draws a paid response: the body, and the reading it carries.
+  const serve = (body) => {
+    sky.dataset.step = "200";
+    result.querySelector("code").textContent = body;
+    result.hidden = false;
+    const reading = readingOf(body);
+    if (reading !== null) {
+      document.getElementById("paid-temp").textContent = String(reading.celsius);
+      document.getElementById("paid-forecast").textContent = reading.forecast;
+      document.getElementById("paid-icon").setAttribute("href", `#i-${reading.forecast}`);
+      document.getElementById("paid-reading").textContent = `${reading.celsius} °C, ${reading.forecast}`;
+      sky.dataset.forecast = reading.forecast;
+    }
   };
   const refuse = () => {
     status.dataset.outcome = "refused";
@@ -440,17 +539,7 @@ export function start(document, window) {
       });
       showStatus(document, status, statusLine(paid), paid.transaction);
       if (paid.paid) {
-        sky.dataset.step = "200";
-        result.querySelector("code").textContent = paid.body;
-        result.hidden = false;
-        const reading = readingOf(paid.body);
-        if (reading !== null) {
-          document.getElementById("paid-temp").textContent = String(reading.celsius);
-          document.getElementById("paid-forecast").textContent = reading.forecast;
-          document.getElementById("paid-icon").setAttribute("href", `#i-${reading.forecast}`);
-          document.getElementById("paid-reading").textContent = `${reading.celsius} °C, ${reading.forecast}`;
-          sky.dataset.forecast = reading.forecast;
-        }
+        serve(paid.body);
         withdraw("paid");
       } else if (UNSETTLED.includes(paid.reason)) {
         withdraw("pending");
@@ -473,4 +562,46 @@ export function start(document, window) {
       }
     }
   });
+
+  // A payment from code shows once the seller has it under this tab's visit.
+  // The page asks while in view, and stops when it shows, when Adena paid, or
+  // VISIT_WATCH_MS after the last copy or return to the tab.
+  const lookup = `${origin}${pathname}/visits/${visit}`;
+  let watching = stored(window, WATCHING_KEY) === "1";
+  let watchUntil = 0;
+  let next;
+  let asking = false;
+  const ask = async () => {
+    window.clearTimeout(next);
+    next = undefined;
+    if (asking || Date.now() >= watchUntil || ["paid", "pending"].includes(status.dataset.outcome)) {
+      return;
+    }
+    if (document.visibilityState !== "hidden") {
+      asking = true;
+      const found = await lookUpVisit(window, lookup);
+      asking = false;
+      if (found !== null) {
+        showStatus(document, status, statusLine({ paid: true, from: "code", ...found }), found.transaction);
+        serve(found.body);
+        settle("paid");
+        return;
+      }
+    }
+    next = window.setTimeout(ask, VISIT_POLL_MS);
+  };
+  const watch = () => {
+    watching = true;
+    store(window, WATCHING_KEY, "1");
+    watchUntil = Date.now() + VISIT_WATCH_MS;
+    void ask();
+  };
+  document.addEventListener("visibilitychange", () => {
+    if (watching && document.visibilityState === "visible") {
+      watch();
+    }
+  });
+  if (watching) {
+    watch();
+  }
 }

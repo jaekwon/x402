@@ -401,6 +401,13 @@ describe("statusLine", () => {
     );
   });
 
+  // A payment made from code came from an account the page never saw.
+  it("names who paid from code, by the ends of the address", () => {
+    expect(
+      statusLine({ paid: true, from: "code", status: 200, transaction: TX_HASH, network: "gno:onyx-1", payer: PAYER, reason: "" }),
+    ).toBe(`Paid from code by g1jg8m…sqf5 on gno:onyx-1. Transaction ${TX_HASH}.`);
+  });
+
   // The chain admitted the payment and has not executed it yet: the weather is
   // withheld, but the payment may still go through, and the hash is how the
   // buyer finds out.
@@ -517,28 +524,44 @@ function fakePage() {
     "send-link": element(),
   };
   const copyable = element();
-  const urls = [element(), element()];
+  const urls = [element()];
+  const payUrls = [element(), element()];
   const made = [];
+  const listeners = {};
   const document = {
     title: "Payment required · x402 on Gno testnet demo",
+    visibilityState: "visible",
+    listeners,
+    addEventListener(type, fn) {
+      listeners[type] = fn;
+    },
     getElementById: (id) => elements[id],
-    querySelectorAll: (selector) => ({ "pre[data-copy]": [copyable], "[data-url]": urls })[selector] ?? [],
+    querySelectorAll: (selector) =>
+      ({ "pre[data-copy]": [copyable], "[data-url]": urls, "[data-pay-url]": payUrls })[selector] ?? [],
     createElement: () => {
       const e = element();
       made.push(e);
       return e;
     },
   };
+  const storage = new Map();
   const window = {
     location: new globalThis.URL(URL),
     navigator: {},
     fetch: vi.fn(),
+    crypto: globalThis.crypto,
+    sessionStorage: {
+      getItem: (key) => storage.get(key) ?? null,
+      setItem: (key, value) => storage.set(key, String(value)),
+    },
+    getSelection: () => "",
     setTimeout,
+    clearTimeout,
     setInterval,
     clearInterval,
     addEventListener() {},
   };
-  return { document, window, elements, urls, made };
+  return { document, window, elements, urls, payUrls, copyable, storage, made };
 }
 
 // shown is the text a sighted visitor reads in node, which leaves out what is
@@ -965,16 +988,22 @@ describe("start, without Adena", () => {
   });
 });
 
+// visitOf returns the visit token the page put in its pay commands.
+function visitOf(payUrls) {
+  return payUrls[0].textContent.match(/visit=([0-9a-f]{32})/)?.[1];
+}
+
 describe("start, this page's URL", () => {
   // A fragment such as #how comes from a link inside the page and is no part of
   // the seller's URL, so a command carrying it is not the one to paste.
   it("fills the commands with the page's URL less its fragment", () => {
-    const { document, window, urls } = fakePage();
+    const { document, window, urls, payUrls } = fakePage();
     window.location = new globalThis.URL(`${URL}#how`);
 
     start(document, window);
 
-    expect(urls.map((e) => e.textContent)).toEqual([URL, URL]);
+    expect(urls.map((e) => e.textContent)).toEqual([URL]);
+    expect(payUrls.map((e) => e.textContent)).toEqual(Array(2).fill(`'${URL}?visit=${visitOf(payUrls)}'`));
   });
 
   // An unquoted ? is a glob in zsh and & ends the command in every shell, so a
@@ -989,8 +1018,211 @@ describe("start, this page's URL", () => {
 
       start(document, window);
 
-      expect(urls.map((e) => e.textContent)).toEqual([word, word]);
+      expect(urls.map((e) => e.textContent)).toEqual([word]);
     }
+  });
+});
+
+// The visit names this tab in the URL a payment from code goes to, so the
+// seller can tell the page of a payment it never saw.
+describe("start, the tab's visit", () => {
+  it("puts a visit of its own in the commands that pay this page", () => {
+    const { document, window, payUrls, storage } = fakePage();
+
+    start(document, window);
+
+    const visit = visitOf(payUrls);
+    expect(visit).toMatch(/^[0-9a-f]{32}$/);
+    expect(payUrls.map((e) => e.textContent)).toEqual(Array(2).fill(`'${URL}?visit=${visit}'`));
+    expect([...storage.values()]).toContain(visit);
+  });
+
+  // A reload keeps watching for the payment the commands were copied for.
+  it("keeps the tab's visit across a reload", () => {
+    const first = fakePage();
+    start(first.document, first.window);
+    const second = fakePage();
+    for (const [key, value] of first.storage) {
+      second.storage.set(key, value);
+    }
+
+    start(second.document, second.window);
+
+    expect(visitOf(second.payUrls)).toBe(visitOf(first.payUrls));
+  });
+
+  // A link carrying another tab's visit would light that tab with this
+  // visitor's payment.
+  it("replaces a visit the page's own URL carries", () => {
+    const planted = "f".repeat(32);
+    const { document, window, payUrls } = fakePage();
+    window.location = new globalThis.URL(`${URL}?city=paris&visit=${planted}`);
+
+    start(document, window);
+
+    const visit = visitOf(payUrls);
+    expect(visit).not.toBe(planted);
+    expect(payUrls[0].textContent).toBe(`'${URL}?city=paris&visit=${visit}'`);
+  });
+
+  it("makes a visit where the browser refuses storage", () => {
+    const { document, window, payUrls } = fakePage();
+    Object.defineProperty(window, "sessionStorage", {
+      get() {
+        throw new DOMException("The operation is insecure.", "SecurityError");
+      },
+    });
+
+    start(document, window);
+
+    expect(visitOf(payUrls)).toMatch(/^[0-9a-f]{32}$/);
+  });
+});
+
+// visited is the seller's answer to a lookup of a visit it kept a payment under.
+function visited() {
+  return new Response(JSON.stringify({ transaction: TX_HASH, network: "gno:onyx-1", payer: PAYER, body: WEATHER }), {
+    status: 200,
+    headers: { "Content-Type": "application/json" },
+  });
+}
+
+// notYet is the seller's answer while no payment settled under a visit.
+function notYet() {
+  return new Response("404 page not found", { status: 404 });
+}
+
+// watchingPage is a page whose seller answers lookups of its visit with
+// answers in turn, then notYet, and whose Copy button holds the key command.
+function watchingPage(...answers) {
+  const page = fakePage();
+  page.window.navigator.clipboard = { writeText: vi.fn(async () => {}) };
+  const lookups = [];
+  page.window.fetch = vi.fn(async (url) => {
+    lookups.push(url);
+    return (answers.shift() ?? notYet)();
+  });
+  start(page.document, page.window);
+  page.copyable.querySelector("code").innerText =
+    `npx github:gnoverse/x402#client/v0.5.0 --new-key ${page.payUrls[0].textContent}`;
+  return { ...page, lookups, copy: () => page.made[0].listeners.click() };
+}
+
+describe("start, a payment made from code", () => {
+  it("asks the seller nothing before a command is copied", async () => {
+    const { lookups } = watchingPage();
+
+    await Promise.resolve();
+
+    expect(lookups).toEqual([]);
+  });
+
+  it("shows a payment made from code once a command that pays this page is copied", async () => {
+    const { document, elements, lookups, payUrls, copy } = watchingPage(visited);
+
+    await copy();
+
+    await vi.waitFor(() => expect(elements["pay-result"].hidden).toBe(false));
+    expect(lookups).toEqual([`${URL}/visits/${visitOf(payUrls)}`]);
+    expect(shown(elements["pay-status"])).toBe(`Paid from code by g1jg8m…sqf5 on gno:onyx-1. Transaction ${TX_HASH}.`);
+    expect(elements["pay-result"].querySelector("code").textContent).toBe(WEATHER);
+    expect(elements.sky.dataset).toMatchObject({ step: "200", forecast: "sunny" });
+    expect(document.title).toBe("Payment settled · x402 on Gno testnet demo");
+    expect(elements.pay.hidden).toBe(true);
+  });
+
+  // The visitor did nothing on the page, so it takes no focus from where they are.
+  it("leaves focus where it is when a payment from code shows", async () => {
+    const { elements, copy } = watchingPage(visited);
+
+    await copy();
+
+    await vi.waitFor(() => expect(elements["pay-result"].hidden).toBe(false));
+    expect(elements["pay-status"].focused).toBe(false);
+  });
+
+  // Copying the payee's address or a snippet is no sign of a payment coming.
+  it("watches on a copy that carries the visit, and on no other", async () => {
+    const { document, window, payUrls, lookups } = watchingPage();
+
+    window.getSelection = () => "g1u7y667z64x2h7vc6fmpcprgey4ck233jaww9zq";
+    document.listeners.copy();
+    await Promise.resolve();
+    expect(lookups).toEqual([]);
+
+    window.getSelection = () => `npx github:gnoverse/x402#client/v0.5.0 ${payUrls[1].textContent}`;
+    document.listeners.copy();
+    await vi.waitFor(() => expect(lookups).toHaveLength(1));
+  });
+
+  it("asks every three seconds until the payment settles, then stops", async () => {
+    vi.useFakeTimers();
+    try {
+      const { elements, lookups, copy } = watchingPage(notYet, notYet, visited);
+
+      await copy();
+      await vi.advanceTimersByTimeAsync(3000);
+      expect(lookups).toHaveLength(2);
+      await vi.advanceTimersByTimeAsync(3000);
+      expect(elements["pay-result"].hidden).toBe(false);
+      await vi.advanceTimersByTimeAsync(30_000);
+      expect(lookups).toHaveLength(3);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  // Funding a fresh key takes minutes, but a visitor who never pays should not
+  // leave the page asking for as long as it stays open.
+  it("stops asking ten minutes after the copy", async () => {
+    vi.useFakeTimers();
+    try {
+      const { lookups, copy } = watchingPage();
+
+      await copy();
+      await vi.advanceTimersByTimeAsync(10 * 60_000);
+      const asked = lookups.length;
+      await vi.advanceTimersByTimeAsync(60_000);
+
+      expect(asked).toBeGreaterThan(100);
+      expect(lookups).toHaveLength(asked);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  // The buyer pays in a terminal, often over the page: the page asks nothing
+  // out of view, and asks at once on the way back.
+  it("asks while in view, and as soon as the visitor comes back", async () => {
+    vi.useFakeTimers();
+    try {
+      const { document, lookups, copy } = watchingPage();
+      document.visibilityState = "hidden";
+
+      await copy();
+      await vi.advanceTimersByTimeAsync(9000);
+      expect(lookups).toEqual([]);
+
+      document.visibilityState = "visible";
+      document.listeners.visibilitychange();
+      expect(lookups).toHaveLength(1);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("keeps watching after a reload once a command was copied", async () => {
+    const first = watchingPage();
+    await first.copy();
+    const second = fakePage();
+    for (const [key, value] of first.storage) {
+      second.storage.set(key, value);
+    }
+    second.window.fetch = vi.fn(async () => visited());
+
+    start(second.document, second.window);
+
+    await vi.waitFor(() => expect(second.elements["pay-result"].hidden).toBe(false));
   });
 });
 
