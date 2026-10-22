@@ -379,9 +379,12 @@ export function shellWord(url) {
 
 /** Wires the page: this page's URL, copy buttons, the live terms, and Adena. */
 export function start(document, window) {
-  // A fragment comes from a link inside this page, not from the seller.
+  // A fragment comes from a link inside this page, not from the seller, and a
+  // visit in the query names another tab.
   const { origin, pathname, search } = window.location;
-  const here = origin + pathname + search;
+  const own = new URL(origin + pathname + search);
+  own.searchParams.delete("visit");
+  const here = own.href;
   for (const e of document.querySelectorAll("[data-url]")) {
     e.textContent = shellWord(here);
   }

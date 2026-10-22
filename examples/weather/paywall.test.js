@@ -1065,6 +1065,22 @@ describe("start, the tab's visit", () => {
     expect(payUrls[0].textContent).toBe(`'${URL}?city=paris&visit=${visit}'`);
   });
 
+  // Paying a URL that carries a planted visit would file this visitor's payment
+  // under another tab's token, where whoever planted it could read who paid.
+  it("keeps a visit the page's own URL carries out of every request it makes", async () => {
+    const planted = "f".repeat(32);
+    const { document, window, elements, urls } = fakePage();
+    window.location = new globalThis.URL(`${URL}?visit=${planted}`);
+    window.adena = fakeAdena();
+    window.fetch = fakeSeller(terms(), settled);
+    start(document, window);
+
+    await elements.pay.listeners.click();
+
+    expect(window.fetch.mock.calls.map(([url]) => url)).toEqual([URL, URL]);
+    expect(urls[0].textContent).toBe(URL);
+  });
+
   it("makes a visit where the browser refuses storage", () => {
     const { document, window, payUrls } = fakePage();
     Object.defineProperty(window, "sessionStorage", {
