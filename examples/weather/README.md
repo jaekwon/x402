@@ -184,7 +184,8 @@ stock client's snippet and before the seller's.
 `/` redirects to `/weather`, and `/favicon.ico` serves the page's icon, unpriced. A paid request
 whose URL carries `?visit=<token>`, 32 hex characters, is kept for 15 minutes, up to 1000 at once,
 the first payment under a token winning: `/weather/visits/<token>` answers with its transaction,
-network, payer and the body served, or 404, never cached, on a rate limit of its own.
+network, payer and the body served, or 404, never cached, on a rate limit of its own: 50 lookups a
+second, bursts of 100, for all pages together, whatever `-rate-per-second` and `-rate-burst` say.
 
 ## Paying it
 

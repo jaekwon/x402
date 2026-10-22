@@ -132,6 +132,21 @@ func TestARefusedPaymentIsKeptUnderNoVisit(t *testing.T) {
 	assert.Equal(t, http.StatusNotFound, lookUpVisit(t, sellerURL, aVisit).StatusCode)
 }
 
+// The priced route's limit spares the facilitator; pages polling for their
+// visits cost the seller a map read, and many poll at once.
+func TestLookupsAreNotThrottledByThePricedRoutesLimit(t *testing.T) {
+	gnofacilitator := httptest.NewServer(facilitator.New(unreachableChain{}, exacttest.ChainID).Handler())
+	t.Cleanup(gnofacilitator.Close)
+	sellerURL, _ := weatherSeller(t, gnofacilitator.URL, func(cfg *sellerConfig) {
+		cfg.ratePerSecond = 0.001
+		cfg.rateBurst = 1
+	})
+
+	for range 20 {
+		assert.Equal(t, http.StatusNotFound, lookUpVisit(t, sellerURL, aVisit).StatusCode)
+	}
+}
+
 // Pages polling for their visits must not spend the budget that admits a
 // payment, or a page left open would refuse the next buyer.
 func TestLookingUpVisitsSpendsNothingOfThePricedRoutesLimit(t *testing.T) {

@@ -266,7 +266,7 @@ func newSeller(ctx context.Context, cfg sellerConfig) (http.Handler, error) {
 	limited := http.NewServeMux()
 	limited.Handle(route, newRateLimit(cfg.ratePerSecond, cfg.rateBurst).guard(visits.recordSettled(paid)))
 	limited.Handle("GET "+weatherPath+"/visits/{token}",
-		newRateLimit(cfg.ratePerSecond, cfg.rateBurst).guard(visits.lookupHandler()))
+		newRateLimit(lookupRatePerSecond, lookupRateBurst).guard(visits.lookupHandler()))
 
 	// Someone who types the host alone gets the demo: at the public URL when the
 	// seller knows it, since a proxy that strips a prefix with no trailing slash

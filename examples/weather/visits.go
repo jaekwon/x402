@@ -23,6 +23,10 @@ const (
 	// maxVisitBody bounds the response kept with each; the weather is a few
 	// dozen bytes, and a longer response is kept without its body.
 	maxVisitBody = 4 << 10
+	// The lookups of every page together: room for about 150 pages asking
+	// every 3 s.
+	lookupRatePerSecond = 50
+	lookupRateBurst     = 100
 )
 
 // visitToken is a token as the page makes one: 128 random bits in hex.
