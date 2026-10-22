@@ -1138,11 +1138,16 @@ function watchingPage(...answers) {
 
 describe("start, a payment made from code", () => {
   it("asks the seller nothing before a command is copied", async () => {
-    const { lookups } = watchingPage();
+    vi.useFakeTimers();
+    try {
+      const { lookups } = watchingPage();
 
-    await Promise.resolve();
+      await vi.advanceTimersByTimeAsync(60_000);
 
-    expect(lookups).toEqual([]);
+      expect(lookups).toEqual([]);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it("shows a payment made from code once a command that pays this page is copied", async () => {
