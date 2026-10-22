@@ -970,11 +970,27 @@ describe("start, this page's URL", () => {
   // the seller's URL, so a command carrying it is not the one to paste.
   it("fills the commands with the page's URL less its fragment", () => {
     const { document, window, urls } = fakePage();
-    window.location = new globalThis.URL(`${URL}?city=paris#how`);
+    window.location = new globalThis.URL(`${URL}#how`);
 
     start(document, window);
 
-    expect(urls.map((e) => e.textContent)).toEqual([`${URL}?city=paris`, `${URL}?city=paris`]);
+    expect(urls.map((e) => e.textContent)).toEqual([URL, URL]);
+  });
+
+  // An unquoted ? is a glob in zsh and & ends the command in every shell, so a
+  // pasted command would pay another URL, or fail before paying.
+  it("quotes a URL the shell would otherwise read, and the quotes inside it", () => {
+    for (const [page, word] of [
+      [`${URL}?city=paris&units=c`, `'${URL}?city=paris&units=c'`],
+      ["https://weather.example/o'clock/weather", `'https://weather.example/o'\\''clock/weather'`],
+    ]) {
+      const { document, window, urls } = fakePage();
+      window.location = new globalThis.URL(page);
+
+      start(document, window);
+
+      expect(urls.map((e) => e.textContent)).toEqual([word, word]);
+    }
   });
 });
 

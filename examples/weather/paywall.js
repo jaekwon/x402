@@ -303,13 +303,21 @@ const TITLE_UNPAID = "Payment required";
 const TITLE_SETTLED = "Payment settled";
 const TITLE_SENT = "Payment sent";
 
+/**
+ * Writes url as one shell word: bare when a shell reads none of its
+ * characters, single-quoted otherwise.
+ */
+export function shellWord(url) {
+  return /^[\w@%+=:,./-]+$/.test(url) ? url : `'${url.replaceAll("'", `'\\''`)}'`;
+}
+
 /** Wires the page: this page's URL, copy buttons, the live terms, and Adena. */
 export function start(document, window) {
   // A fragment comes from a link inside this page, not from the seller.
   const { origin, pathname, search } = window.location;
   const here = origin + pathname + search;
   for (const e of document.querySelectorAll("[data-url]")) {
-    e.textContent = here;
+    e.textContent = shellWord(here);
   }
 
   if (window.navigator.clipboard !== undefined) {
