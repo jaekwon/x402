@@ -177,7 +177,10 @@ buyer first: make a throwaway key with it for the page's URL, fund the key, then
 the key step printed. Below them, the page shows how a seller lists gno on a route in Go, and where
 a facilitator runs. A warning that the mechanism is unaudited and pre-release comes right before the
 stock client's snippet and before the seller's.
-`/` redirects to `/weather`, and `/favicon.ico` serves the page's icon, unpriced.
+`/` redirects to `/weather`, and `/favicon.ico` serves the page's icon, unpriced. A paid request
+whose URL carries `?visit=<token>`, 32 hex characters, is kept for 15 minutes, up to 1000 at once,
+the first payment under a token winning: `/weather/visits/<token>` answers with its transaction,
+network, payer and the body served, or 404, never cached, on a rate limit of its own.
 
 ## Paying it
 

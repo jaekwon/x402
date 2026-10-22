@@ -135,6 +135,12 @@ func termsOf(t *testing.T, sellerURL string) x402.PaymentRequired {
 // what the seller answered the paid request with.
 func payWith(t *testing.T, sellerURL, txB64 string) *http.Response {
 	t.Helper()
+	return payAt(t, sellerURL, "/weather", txB64)
+}
+
+// payAt is payWith sending the paid request to path, which may carry a query.
+func payAt(t *testing.T, sellerURL, path, txB64 string) *http.Response {
+	t.Helper()
 
 	required := termsOf(t, sellerURL)
 	require.Len(t, required.Accepts, 1)
@@ -145,7 +151,7 @@ func payWith(t *testing.T, sellerURL, txB64 string) *http.Response {
 		Payload:     map[string]any{"transaction": txB64},
 	})
 	require.NoError(t, err)
-	req, err := http.NewRequestWithContext(t.Context(), http.MethodGet, sellerURL+"/weather", nil)
+	req, err := http.NewRequestWithContext(t.Context(), http.MethodGet, sellerURL+path, nil)
 	require.NoError(t, err)
 	req.Header.Set("PAYMENT-SIGNATURE", base64.StdEncoding.EncodeToString(payload))
 
