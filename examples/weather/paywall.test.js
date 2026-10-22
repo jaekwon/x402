@@ -1109,19 +1109,31 @@ function notYet() {
 }
 
 // watchingPage is a page whose seller answers lookups of its visit with
-// answers in turn, then notYet, and whose Copy button holds the key command.
+// answers in turn, then notYet, and any other request as sellWith last set,
+// and whose Copy button holds the key command.
 function watchingPage(...answers) {
   const page = fakePage();
   page.window.navigator.clipboard = { writeText: vi.fn(async () => {}) };
   const lookups = [];
-  page.window.fetch = vi.fn(async (url) => {
+  let seller = fakeSeller(terms(), settled);
+  page.window.fetch = vi.fn(async (url, init) => {
+    if (!url.includes("/visits/")) {
+      return seller(url, init);
+    }
     lookups.push(url);
     return (answers.shift() ?? notYet)();
   });
   start(page.document, page.window);
   page.copyable.querySelector("code").innerText =
     `npx github:gnoverse/x402#client/v0.5.0 --new-key ${page.payUrls[0].textContent}`;
-  return { ...page, lookups, copy: () => page.made[0].listeners.click() };
+  return {
+    ...page,
+    lookups,
+    copy: () => page.made[0].listeners.click(),
+    sellWith: (answer) => {
+      seller = fakeSeller(terms(), answer);
+    },
+  };
 }
 
 describe("start, a payment made from code", () => {
@@ -1222,6 +1234,64 @@ describe("start, a payment made from code", () => {
       document.visibilityState = "visible";
       document.listeners.visibilitychange();
       expect(lookups).toHaveLength(1);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  // A payment from code drawn while the Adena prompt is open would be overwritten
+  // by however the visitor answers it.
+  it("waits for Adena to finish before showing a payment made from code", async () => {
+    vi.useFakeTimers();
+    try {
+      const page = watchingPage(visited);
+      let answer;
+      page.window.adena = fakeAdena();
+      page.window.adena.SignTx = vi.fn(
+        () =>
+          new Promise((resolve) => {
+            answer = resolve;
+          }),
+      );
+      const paying = page.elements.pay.listeners.click();
+      await vi.waitFor(() => expect(page.window.adena.SignTx).toHaveBeenCalled());
+
+      await page.copy();
+      await vi.advanceTimersByTimeAsync(9000);
+      expect(page.lookups).toEqual([]);
+
+      answer({ code: 4001, status: "failure", type: "TRANSACTION_REJECTED", message: "User rejected", data: null });
+      await paying;
+      await vi.advanceTimersByTimeAsync(3000);
+
+      expect(shown(page.elements["pay-status"])).toMatch(/^Paid from code by /);
+      expect(page.elements["pay-status"].dataset.outcome).toBe("paid");
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  // The pending payment's hash is the buyer's only way to check it.
+  it("keeps an Adena payment still pending when a lookup lands after it", async () => {
+    vi.useFakeTimers();
+    try {
+      let release;
+      const held = () =>
+        new Promise((resolve) => {
+          release = () => resolve(visited());
+        });
+      const page = watchingPage(held);
+      page.window.adena = fakeAdena();
+      page.sellWith(pending);
+
+      await page.copy();
+      await page.elements.pay.listeners.click();
+      release();
+      await vi.advanceTimersByTimeAsync(0);
+
+      expect(page.elements["pay-status"].dataset.outcome).toBe("pending");
+      expect(shown(page.elements["pay-status"])).toMatch(/^Sent, not settled yet/);
+      expect(shown(page.elements["pay-status"])).toContain(TX_HASH);
     } finally {
       vi.useRealTimers();
     }

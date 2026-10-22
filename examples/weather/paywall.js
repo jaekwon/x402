@@ -567,8 +567,9 @@ export function start(document, window) {
   });
 
   // A payment from code shows once the seller has it under this tab's visit.
-  // The page asks while in view, and stops when it shows, when Adena paid, or
-  // VISIT_WATCH_MS after the last copy or return to the tab.
+  // The page asks while in view and while Adena is not paying, and stops when
+  // one shows, when Adena paid, or VISIT_WATCH_MS after the last copy or
+  // return to the tab.
   const lookup = `${origin}${pathname}/visits/${visit}`;
   let watching = stored(window, WATCHING_KEY) === "1";
   let watchUntil = 0;
@@ -580,11 +581,12 @@ export function start(document, window) {
     if (asking || Date.now() >= watchUntil || ["paid", "pending"].includes(status.dataset.outcome)) {
       return;
     }
-    if (document.visibilityState !== "hidden") {
+    if (document.visibilityState !== "hidden" && !button.disabled) {
       asking = true;
       const found = await lookUpVisit(window, lookup);
       asking = false;
-      if (found !== null) {
+      // Adena may have started or ended a payment while the seller answered.
+      if (found !== null && !button.disabled && !["paid", "pending"].includes(status.dataset.outcome)) {
         showStatus(document, status, statusLine({ paid: true, from: "code", ...found }), found.transaction);
         serve(found.body);
         settle("paid");
