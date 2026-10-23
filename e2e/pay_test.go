@@ -5,8 +5,9 @@
 //
 // This drives gno.land's txtar harness, which starts a real in-memory node, and
 // adds two commands to it: one that stands up the facilitator against that node,
-// one that guards an HTTP resource with the canonical middleware. The buyer is the
-// JS one, run by `exec node`, so the assertion crosses both languages.
+// one that guards an HTTP resource with the canonical middleware. The buyer here is
+// the JS one, run by `exec node`, so the assertion crosses both languages;
+// goclient_test.go drives the same commands with the Go one.
 //
 // settle_test.go starts in-process nodes itself instead, to settle one signed
 // payment twice at once and to replay a settled one, which a scripted buyer

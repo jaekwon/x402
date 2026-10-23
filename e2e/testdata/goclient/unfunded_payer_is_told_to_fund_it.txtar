@@ -1,0 +1,27 @@
+# A buyer paying from an address the chain has never funded is told which
+# address to fund, and nothing is signed.
+#
+# The mnemonic is the public BIP39 test vector: 23 "abandon" words, then "art".
+# The harness funds test1 and the users a script adds with adduser, never this one.
+gnoland start
+
+x402facilitator
+x402seller seller.json $test1_user_addr
+
+env 'X402_MNEMONIC=abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon art'
+! x402gobuyer
+stdout 'not paid: .*the chain holds no account for g1r5v5srda7xfth3hn2s26txvrcrntldjughmckm; fund it'
+! stdout 'sunny'
+
+-- seller.json --
+{
+  "route": "GET /weather",
+  "price": { "asset": "ugnot", "amount": "250000" },
+  "description": "Weather data",
+  "mimeType": "application/json",
+  "body": {
+    "location": "Paris",
+    "forecast": "sunny",
+    "celsius": 24
+  }
+}

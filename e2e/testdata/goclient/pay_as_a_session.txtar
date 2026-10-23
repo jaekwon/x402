@@ -1,0 +1,60 @@
+# The Go client pays with a session key: a key its owner registered on chain
+# under their own account, limited to bank sends, with a spend cap and an expiry.
+# The payment moves the owner's coins, the client never holds the owner's key,
+# and the chain enforces the cap whatever the client's own code does.
+adduser seller
+adduser owner
+
+gnoland start
+
+# The owner registers the client's key, the public key of X402_MNEMONIC below:
+# bank sends only, 500000ugnot over the session's lifetime with fees counted,
+# for an hour. The key is not an account of its own and holds no coins.
+gnokey maketx session create -pubkey gpub1pgfj7ard9eg82cjtv4u4xetrwqer2dntxyfzxz3pq09lvqmfhfr2dse7d3c035nvf2uj34ecr06up6rqmpf0dv7d05kj5724h7r -allow-paths bank/send -spend-limit 500000ugnot -expires-at 1h -gas-fee 4000ugnot -gas-wanted 2000000 -broadcast -chainid tendermint_test owner
+stdout OK!
+
+x402facilitator
+x402seller seller.json $seller_user_addr
+
+env X402_MNEMONIC='dance carry grunt uphold cloth wire usage usage clock reduce surprise page destroy reopen multiply away defense promote person web cigar immense armed enough'
+env X402_SESSION_MASTER=$owner_user_addr
+x402gobuyer
+
+# The resource was served, and the settlement names the owner as the payer.
+stdout '"status":200'
+stdout 'sunny'
+stdout "payer":"$owner_user_addr"
+
+# The seller got the price. The owner paid the price, the payment's fee of
+# 20000ugnot and the session's creation fee of 4000ugnot.
+gnokey query bank/balances/$seller_user_addr
+stdout '1000250000ugnot'
+gnokey query bank/balances/$owner_user_addr
+stdout '999726000ugnot'
+
+# The session has spent 270000ugnot of its 500000, the price and the fee. A
+# second payment would bring the total to 540000, so the chain refuses it in the
+# facilitator's simulation at verify, before any broadcast.
+! x402gobuyer
+stdout '"status":402'
+stdout '"reason":"invalid_exact_gno_transaction_simulation_failed"'
+! stdout 'sunny'
+
+# Nothing moved.
+gnokey query bank/balances/$seller_user_addr
+stdout '1000250000ugnot'
+gnokey query bank/balances/$owner_user_addr
+stdout '999726000ugnot'
+
+-- seller.json --
+{
+  "route": "GET /weather",
+  "price": { "asset": "ugnot", "amount": "250000" },
+  "description": "Weather data",
+  "mimeType": "application/json",
+  "body": {
+    "location": "Paris",
+    "forecast": "sunny",
+    "celsius": 24
+  }
+}

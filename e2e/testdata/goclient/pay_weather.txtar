@@ -1,0 +1,55 @@
+# Upstream's Go client, taught gno by registering client/exact, pays a gno seller
+# for an ordinary HTTP resource, and the chain agrees that it happened.
+#
+# The buyer has an account of its own, so its balance shows what a payment
+# costs: the price, and the fee on top of it, which is twice this chain's 1ugnot
+# per 1000 gas for the 10000000 gas a payment reserves.
+adduser seller
+adduser buyer
+
+gnoland start
+
+gnokey query bank/balances/$buyer_user_addr
+stdout '1000000000ugnot'
+
+x402facilitator
+x402seller seller.json $seller_user_addr
+
+env X402_MNEMONIC=$buyer_user_seed
+x402gobuyer
+
+# The resource was served, and the settlement names the transaction and the
+# payer.
+stdout '"status":200'
+stdout 'sunny'
+stdout '"transaction":"[0-9a-f]+"'
+stdout "payer":"$buyer_user_addr"
+
+# The money moved: the price to the seller, the price and the fee from the buyer.
+gnokey query bank/balances/$seller_user_addr
+stdout '1000250000ugnot'
+gnokey query bank/balances/$buyer_user_addr
+stdout '999730000ugnot'
+
+# A second purchase signs over the sequence the first one consumed, so it pays
+# only if the buyer reads its account afresh for every payment.
+x402gobuyer
+stdout '"status":200'
+
+gnokey query bank/balances/$seller_user_addr
+stdout '1000500000ugnot'
+gnokey query bank/balances/$buyer_user_addr
+stdout '999460000ugnot'
+
+-- seller.json --
+{
+  "route": "GET /weather",
+  "price": { "asset": "ugnot", "amount": "250000" },
+  "description": "Weather data",
+  "mimeType": "application/json",
+  "body": {
+    "location": "Paris",
+    "forecast": "sunny",
+    "celsius": 24
+  }
+}

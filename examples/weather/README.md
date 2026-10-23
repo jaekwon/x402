@@ -158,8 +158,8 @@ for the page's URL, fund the key, then run the pay command the key step printed.
 
 ## Paying it
 
-There is no Go client mechanism, so a Go buyer cannot pay this. `buy.mjs` can, and one command runs
-it without a clone.
+`buy.mjs` pays it, and one command runs it without a clone. From Go, register the
+[Go mechanism](../../client/README.md#from-go) on upstream's Go client instead.
 
 > **Read [`buy.mjs`](https://github.com/gnoverse/x402/blob/client/v0.5.0/examples/weather/buy.mjs)
 > before you run it.** It signs with the mnemonic you give it, so never

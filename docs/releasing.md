@@ -8,6 +8,9 @@ Three components, three independent version lines. Releasing one does not touch 
 | `client` | `client/vX.Y.Z` | `@gnoverse/x402-gno` on npm, with provenance |
 | `weather` | `weather/vX.Y.Z` | `ghcr.io/gnoverse/x402-weather`, the demo seller's image for amd64 and arm64, attested; `latest` follows plain releases only |
 
+The Go mechanisms, `server/exact` and `client/exact`, are packages of the Go module, so they
+release with the facilitator's `vX.Y.Z`. `client/vX.Y.Z` releases the npm package alone.
+
 All three run from the manual `release.yml` workflow. Nothing releases on push or merge.
 
 ## Release the facilitator

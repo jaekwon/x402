@@ -1,0 +1,35 @@
+# A seller binds the payment to its own invoice reference, and the Go client
+# honors it: the offer names extra.memo, the client signs it into the
+# transaction, and it travels on chain with the money.
+#
+# The settlement is the assertion. The facilitator refuses a transaction whose
+# memo differs from the one the requirements name, so a payment that settles is
+# proof the client read extra.memo and signed it in.
+adduser seller
+
+gnoland start
+
+x402facilitator
+x402seller invoice.json $seller_user_addr
+
+x402gobuyer
+stdout '"status":200'
+stdout 'export ready'
+stdout '"transaction":"[0-9a-f]+"'
+! stdout 'memo_mismatch'
+
+gnokey query bank/balances/$seller_user_addr
+stdout '1000250000ugnot'
+
+-- invoice.json --
+{
+  "route": "GET /orders/1042/export",
+  "price": { "asset": "ugnot", "amount": "250000" },
+  "description": "Order data export",
+  "mimeType": "application/json",
+  "memo": "inv-2026-08-1042",
+  "body": {
+    "order": 1042,
+    "status": "export ready"
+  }
+}

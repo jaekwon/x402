@@ -87,19 +87,36 @@ const paid = wrapFetchWithPayment(fetch, client);
 const res = await paid("https://api.example.com/weather");
 ```
 
-From `@x402/core` 2.23 a stock client pays only in USD-pegged assets unless an asset is listed in
-its spend controls, so the buyer lists ugnot. `maxAmountPerPayment` is the most one request may
-cost, in ugnot; the network fee is paid on top.
+From Go, register [`client/exact`](client/exact) on upstream's Go client:
 
-Recognising the 402, selecting an entry, encoding `PAYMENT-SIGNATURE` and retrying are
-`@x402/fetch`'s own code, unmodified. The payment is signed against the chain id the **offer** names
-rather than the one the wallet's node reports — see [client/README.md](client/README.md) for what
-that does and does not buy you.
+```go
+import clientexact "github.com/gnoverse/x402/client/exact"
+
+signer, _ := clientexact.KeybaseSigner(kb, "buyer", password)           // a key gnokey keeps
+node := clientexact.NewGnoclientNode(&gnoclient.Client{RPCClient: rpc}) // a node on onyx-1
+
+client := x402.Newx402Client().
+	Register("gno:onyx-1", clientexact.NewExactGnoScheme(signer, node)).
+	SetSpendControls(x402.SpendControls{AllowedAssets: []x402.SpendControlAsset{
+		{Network: "gno:onyx-1", Asset: "ugnot", MaxAmountPerPayment: "1000000"},
+	}})
+paid := x402http.WrapHTTPClientWithPayment(&http.Client{Timeout: time.Minute}, x402http.Newx402HTTPClient(client))
+res, err := paid.Get("https://api.example.com/weather")
+```
+
+A stock client — `@x402/core` from 2.23, and upstream's Go client — pays only in USD-pegged assets
+unless an asset is listed in its spend controls, so the buyer lists ugnot. `maxAmountPerPayment` is
+the most one request may cost, in ugnot; the network fee is paid on top.
+
+Recognising the 402, selecting an entry, encoding `PAYMENT-SIGNATURE` and retrying are the stock
+client's own code, unmodified: `@x402/fetch`, or upstream's `x402http`. The payment is signed against
+the chain id the **offer** names rather than the one the wallet's node reports — see
+[client/README.md](client/README.md) for what that does and does not buy you.
 
 An agent can pay with a [session key](client/README.md#paying-with-a-session-key) instead of its
-owner's key: `new ExactGnoScheme(wallet, { master })`, where `master` is the owner's address and
-the wallet holds a key the owner registered on chain with a spend limit and an expiry. The chain
-enforces both.
+owner's key: `new ExactGnoScheme(wallet, { master })` in JavaScript, `clientexact.WithMaster(owner)`
+in Go, where the owner's address names the account that pays and the signer holds a key the owner
+registered on chain with a spend limit and an expiry. The chain enforces both.
 
 ## What's in here
 
@@ -113,7 +130,7 @@ implementation detail of the role, so no directory names one.
 |------|------|------|
 | server | `server/exact/` | upstream's `SchemeNetworkServer`, implemented for gno |
 | facilitator | `facilitator/exact/`, `facilitator/` | upstream's `SchemeNetworkFacilitator` for gno, and the `/verify` `/settle` `/supported` service built on upstream's engine |
-| client | `client/src/exact/client.ts` | upstream's `SchemeNetworkClient`, TypeScript |
+| client | `client/src/exact/client.ts`, `client/exact/` | upstream's `SchemeNetworkClient`, in TypeScript and in Go |
 
 Plus `cmd/gnofacilitator/` (the binary), `examples/weather/` (a seller and a buyer that make one
 payment end to end, with a Makefile to run them) and `e2e/` (real payments through real nodes —
@@ -158,7 +175,7 @@ make help                # Every target
 ```
 
 `make test-e2e` starts a node via gno.land's txtar harness, stands up the facilitator and a priced
-endpoint, pays with the JS client, and asserts the seller's balance changed. It also settles one
+endpoint, pays with the JS client and with the Go client, and asserts the balances changed. It also settles one
 payment twice at once in three arrangements: two facilitators sharing a node, two facilitators on
 two peered nodes, and one facilitator balancing over both. It asserts how many report the payment
 settled, and replays a settled payment to assert it is refused.

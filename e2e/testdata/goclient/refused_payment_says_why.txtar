@@ -1,0 +1,34 @@
+# A payment the chain cannot carry is refused with the reason, and nothing moves.
+#
+# The price is beyond what the payer holds, so the payment is well-formed and
+# correctly signed and still cannot succeed. The facilitator's simulation says
+# so at verify, before anything is broadcast, and the seller relays the reason
+# in the error field of its PAYMENT-REQUIRED header.
+adduser seller
+
+gnoland start
+
+x402facilitator
+x402seller unaffordable.json $seller_user_addr
+
+! x402gobuyer
+stdout '"status":402'
+! stdout 'sunny'
+stdout '"transaction":""'
+stdout '"reason":"invalid_exact_gno_transaction_simulation_failed"'
+
+gnokey query bank/balances/$seller_user_addr
+stdout '1000000000ugnot'
+
+-- unaffordable.json --
+{
+  "route": "GET /weather",
+  "price": { "asset": "ugnot", "amount": "100000000000000000" },
+  "description": "Weather data",
+  "mimeType": "application/json",
+  "body": {
+    "location": "Paris",
+    "forecast": "sunny",
+    "celsius": 24
+  }
+}

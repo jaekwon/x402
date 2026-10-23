@@ -39,6 +39,65 @@ entry lists it. The fee stays in ugnot whatever the price is in.
 manifest's `exports` map rather than a built path — so the map is exercised by the payment test
 rather than only by consumers.
 
+## From Go
+
+The same mechanism for upstream's Go client is [`client/exact`](exact), a package of this
+repository's Go module:
+
+```go
+import (
+	"github.com/gnolang/gno/gno.land/pkg/gnoclient"
+	rpcclient "github.com/gnolang/gno/tm2/pkg/bft/rpc/client"
+	"github.com/gnolang/gno/tm2/pkg/crypto/keys"
+	x402 "github.com/x402-foundation/x402/go/v2"
+	x402http "github.com/x402-foundation/x402/go/v2/http"
+
+	clientexact "github.com/gnoverse/x402/client/exact"
+)
+
+kb, _ := keys.NewKeyBaseFromDir(gnokeyHome) // the keys gnokey keeps
+signer, _ := clientexact.KeybaseSigner(kb, "buyer", password)
+rpc, _ := rpcclient.NewHTTPClient("https://rpc.onyx.testnets.gno.land:443")
+node := clientexact.NewGnoclientNode(&gnoclient.Client{RPCClient: rpc})
+
+client := x402.Newx402Client().
+	Register("gno:onyx-1", clientexact.NewExactGnoScheme(signer, node)). // ← teaches the client gno
+	SetSpendControls(x402.SpendControls{AllowedAssets: []x402.SpendControlAsset{
+		{Network: "gno:onyx-1", Asset: "ugnot", MaxAmountPerPayment: "1000000"},
+	}})
+
+paid := x402http.WrapHTTPClientWithPayment(&http.Client{Timeout: time.Minute}, x402http.Newx402HTTPClient(client))
+res, err := paid.Get("https://x402-demo.onyx.testnets.gno.land/weather")
+```
+
+It signs the payment this package signs: for the same offer, key and chain state the two sign the
+same transaction with the same signature bytes, which a test holds them to. The one exception is a
+memo holding U+2028 or U+2029: tm2's sign doc escapes those, this package's does not, and the chain
+refuses the signature this package makes over such a memo. Where they differ:
+
+- **The signer is any key.** `Signer` is a public key and a sign method, so a `crypto.PrivKey` is
+  one, and `KeybaseSigner` adapts a key gnokey keeps, a Ledger key included.
+- **The key can sign somewhere else.** `clientexact.Prepare` builds and checks a payment without
+  signing it, so a buyer can show a person the price first, or have gnokey or a device sign.
+  `Payment.Payload` verifies that signature, over either rendering of the sign doc the chain
+  accepts and by the key the chain will check it against, and returns the scheme payload; the
+  `PaymentPayload` sent to a seller wraps it with the accepted requirements, as upstream's client
+  does.
+- **The node must serve the offer's chain.** A payment signs over the account number and sequence
+  its node reports, so an offer for any other chain is refused before anything is signed. Register
+  one scheme per gno network, each with a node on that network, rather than one under `gno:*`.
+- **Reads are not retried.** The RPC client's timeout bounds each one, 60 s unless
+  `rpcclient.WithRequestTimeout` sets another, and nothing is signed until all have answered.
+- **The spend cap holds in the scheme too.** Upstream's Go client hands the scheme the cap its
+  spend controls resolved for the asset, and a price above it is refused unsigned, even when a
+  payment is asked for directly rather than chosen from a 402.
+- **The fee has a ceiling.** The fee follows the gas price the buyer's node reports, and a node
+  can report any price, while neither the spend cap nor the facilitator bounds the fee. A fee
+  above 1 GNOT, or in a coin other than ugnot, is refused as `ErrExcessiveFee`; on onyx-1 a
+  payment's fee is 0.02 GNOT.
+- **A payment its caller gave up on is not signed.** Every read takes the caller's context, and
+  the context is checked once more before the signer is asked.
+
 ## What it is
 
 `ExactGnoScheme` implements `SchemeNetworkClient` from `@x402/core` — a scheme name plus one method.
@@ -68,6 +127,11 @@ sequence still come from the wallet's provider, because only a chain knows the n
 account — so paying a second gno chain also means pointing the wallet at a node on it. A wallet
 connected elsewhere signs over that node's account state, and the facilitator verifying against the
 paid chain refuses the result as `invalid_exact_gno_payload_signature_invalid`.
+
+The Go mechanism needs no workaround: tm2's `std.Tx.GetSignBytes` takes the chain id as an argument.
+It refuses the mismatch instead of signing it. It asks its node which chain it serves, and an offer
+for another one is refused before anything is signed, since the payment would sign over account
+state from a chain other than the one it commits to.
 
 ## The fee is yours
 
@@ -117,6 +181,12 @@ wallet.connect(await GnoJSONRPCProvider.create(rpcURL));
 client.register("gno:*", new ExactGnoScheme(wallet, { master: "g1owner..." }));
 ```
 
+From Go, the session key is the scheme's signer and the owner's address an option:
+
+```go
+scheme := clientexact.NewExactGnoScheme(sessionSigner, node, clientexact.WithMaster(owner))
+```
+
 Payments move the owner's coins, and the settlement names the owner as the payer. The session key
 holds no coins and is never an account of its own: the chain refuses to register a key whose
 address already holds an account, so make a fresh one. The wallet's provider must be a gno
@@ -144,6 +214,17 @@ asset that is not a gno denomination, an amount that is not a positive integer, 
 `extra.assetTransferMethod` other than `bank-send`, and an `extra.paymentFlow` other than
 `authorization`. A null transfer method or flow names nothing, as upstream's SDKs read it.
 
+The Go mechanism refuses the same, wrapping `ErrInvalidRequirements`, and more:
+
+- a `payTo` not written as the canonical bech32 address the facilitator compares the recipient
+  with, or the zero address;
+- a chain id CAIP-2 cannot name, such as the pattern `gno:*`, which no facilitator can serve;
+- an amount past what one coin holds;
+- a price above the spend cap, as `ErrExceedsSpendCap`, and a fee above 1 GNOT, as
+  `ErrExcessiveFee`;
+- a multisig key, and an offline one in `KeybaseSigner`, since neither can make a payment that
+  settles.
+
 ## Development
 
 Sources are here in `client/src`, laid out by the subpath they publish, and the emit lands beside
@@ -154,3 +235,8 @@ npm run typecheck   # TypeScript 7 (the native compiler)
 npm test            # vitest
 npm run build       # typecheck, then emit client/dist/
 ```
+
+The Go mechanism is in `client/exact`, and `make test` runs its tests with the rest of the module.
+Among them, it is held to payments this package signed, committed under
+`client/exact/testdata`: the same transaction under the same signature bytes; `go generate ./client/exact` signs them again, which needs npm and is only
+for changing what either mechanism signs.
